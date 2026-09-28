@@ -27,7 +27,7 @@ pick a look in a panel, click once, and it lands on your timeline.
 
 ## Install
 
-Get the files from the `claude/sleepy-maxwell-uuyyia` branch (the `main` branch doesn't have them yet), close DaVinci Resolve, then from this folder:
+Download or clone this repo, close DaVinci Resolve, then from this folder:
 
 | System | Command |
 | --- | --- |
