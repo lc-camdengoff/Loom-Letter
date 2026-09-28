@@ -27,11 +27,12 @@ pick a look in a panel, click once, and it lands on your timeline.
 
 ## Install
 
-Close DaVinci Resolve, then from this folder:
+Get the files from the `claude/sleepy-maxwell-uuyyia` branch (the `main` branch doesn't have them yet), close DaVinci Resolve, then from this folder:
 
 | System | Command |
 | --- | --- |
-| macOS / Linux | `./install.sh` |
+| macOS | Double-click **Install Loom Letter.command**, or run `bash install.sh` in Terminal |
+| Linux | `bash install.sh` |
 | Windows | `powershell -ExecutionPolicy Bypass -File install.ps1` |
 
 Start Resolve again. The installer copies three things into your user Fusion folder:
@@ -47,7 +48,7 @@ on macOS, `%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion` on Window
 `~/.local/share/DaVinciResolve/Fusion` on Linux. Set `LOOMLETTER_FUSION_DIR` to install
 somewhere else.
 
-Uninstall with `./install.sh --uninstall` or `install.ps1 -Uninstall`.
+Uninstall with `bash install.sh --uninstall` or `install.ps1 -Uninstall`.
 
 ## First run: Diagnostics
 
