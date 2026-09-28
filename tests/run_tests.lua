@@ -521,7 +521,7 @@ local function run_panel(tracks, ropts, driver)
 		SetData = function(_, _, v) env.prefs = v end,
 	}
 	bmd = { UIDispatcher = dispatcher }
-	LL._resolve, LL._sources = nil, {}
+	LL._resolve, LL._sources, LL._insertMode = nil, {}, nil
 	LL.paths = { titles = TEMPLATES }
 	local ok, err = pcall(LL.runUI)
 	resolve, fu, bmd = nil, nil, nil
@@ -570,7 +570,7 @@ test("panel: second title reuses the cached source and stacks above the first", 
 	eq(#env.timeline.tracks[2], 1); eq(#env.timeline.tracks[3], 1, "second title on V3")
 	local inserts = 0
 	for _, l in ipairs(env.log) do if l:find("^insert") then inserts = inserts + 1 end end
-	eq(inserts, 1, "only one scratch insert")
+	eq(inserts, 2, "one rehearsal per session, then the cached source is reused")
 end)
 
 test("panel: titles fall back to compound clips when there is no media pool item", function()
@@ -664,6 +664,44 @@ test("panel: diagnostics work with no timeline open", function()
 		truthy(status(w):find("iagnostics", 1, true), status(w))
 	end)
 	truthy(find_timeline(env, LL.SCRATCH_TIMELINE), "scratch used instead")
+end)
+
+test("framesToTimecode round-trips", function()
+	eq(LL.framesToTimecode(86400, 24, false), "01:00:00:00")
+	eq(LL.framesToTimecode(1800, 29.97, true), "00:01:00;02")
+	for _, f in ipairs({ 0, 1799, 1800, 17982, 107892, 123456 }) do
+		eq(LL.timecodeToFrames(LL.framesToTimecode(f, 29.97, true), 29.97, true), f, "DF " .. f)
+		eq(LL.timecodeToFrames(LL.framesToTimecode(f, 25, false), 25, false), f, "NDF " .. f)
+	end
+end)
+
+test("panel: titles become real titles via a locked insert when Resolve respects locks", function()
+	local aroll = mock_item(86400, 1000, 1, "A-roll")
+	local later = mock_item(87400, 500, 1, "B-roll")
+	local env = run_panel({ { aroll, later }, {} }, { insert_model = "lock_aware", locked = { [2] = false } }, function(win, w)
+		w.TText.Text = "Real title"
+		win.On.AddTitle.Clicked({})
+		truthy(status(w):find('Added "Slide Up" on V2', 1, true), status(w))
+		truthy(not status(w):find("compound", 1, true), "not a compound clip")
+	end)
+	eq(aroll.start, 86400); eq(later.start, 87400, "clips after the playhead did not move")
+	local placed = env.timeline.tracks[2][1]
+	truthy(placed and placed.name == "LL Slide Up", "real title on V2")
+	local direct = false
+	for _, l in ipairs(env.log) do if l == "insert LL Slide Up into Edit 1" then direct = true end end
+	truthy(direct, "inserted directly into the user's timeline: " .. table.concat(env.log, " / "))
+	eq(placed.comps[1].sets["Title.StyledText"], "Real title")
+	eq(env.timeline.locked[1], false, "user's lock state restored")
+	eq(#find_timeline(env, LL.SCRATCH_TIMELINE).tracks, 1, "rehearsal track removed")
+end)
+
+test("panel: falls back when a locked insert would ripple", function()
+	local aroll = mock_item(86400, 1000, 1)
+	local env = run_panel({ { aroll } }, { insert_model = "ignores_locks", titles_have_mpi = false }, function(win, w)
+		win.On.AddTitle.Clicked({})
+		truthy(status(w):find("compound clip", 1, true), status(w))
+	end)
+	eq(aroll.start, 86400, "user's clip untouched")
 end)
 
 test("panel: problems are reported in the status line", function()

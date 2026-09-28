@@ -18,7 +18,7 @@ something misbehaves, run "Diagnostics" in the window and send that report along
 ]]
 
 local LL = {}
-LL.VERSION = "0.2.5"
+LL.VERSION = "0.3.0"
 LL.BIN_NAME = "Loom Letter"
 LL.SCRATCH_TIMELINE = "Loom Letter Scratch"
 LL.TOOL_TAG = "LoomLetter"          -- tool:SetData key that marks nodes Loom Letter owns
@@ -463,6 +463,25 @@ function LL.timecodeToFrames(tc, fps, dropFrame)
 	return frames
 end
 
+--- Frame count -> timecode string (inverse of timecodeToFrames, drop-frame aware).
+function LL.framesToTimecode(frames, fps, dropFrame)
+	local nominal = math.floor(fps + 0.5)
+	frames = math.floor(frames + 0.5)
+	local sep = ":"
+	if dropFrame then
+		local drop = math.floor(nominal / 15 + 0.5)
+		local perMinute = nominal * 60 - drop
+		local perTen = nominal * 600 - drop * 9
+		local tens, rem = math.floor(frames / perTen), frames % perTen
+		frames = frames + drop * 9 * tens
+		if rem > drop then frames = frames + drop * math.floor((rem - drop) / perMinute) end
+		sep = ";"
+	end
+	local f = frames % nominal
+	local total = math.floor(frames / nominal)
+	return ("%02d:%02d:%02d%s%02d"):format(math.floor(total / 3600), math.floor(total / 60) % 60, total % 60, sep, f)
+end
+
 --- Timeline item -> start, exclusive end (start + duration, so it never depends on
 --- whether GetEnd() is inclusive).
 function LL.itemSpan(item)
@@ -787,12 +806,148 @@ function LL.place(ctx, mpi, frames, track, record)
 	return LL.list(res)[1]
 end
 
+-- Resolve's insert edit gives a real, Inspector-editable title, but it ripples every
+-- unlocked track. Locked tracks are left alone, so we lock everything except one track that
+-- is empty from the playhead onwards, insert, then restore the user's locks.
+
+local TRACK_TYPES = { "video", "audio", "subtitle" }
+
+--- id -> "type:track:start:duration" for every item on the timeline.
+function LL.snapshot(tl)
+	local snap = {}
+	for _, kind in ipairs(TRACK_TYPES) do
+		local ok, n = pcall(function() return tl:GetTrackCount(kind) end)
+		for t = 1, (ok and tonumber(n) or 0) do
+			for _, it in ipairs(LL.list(tl:GetItemListInTrack(kind, t))) do
+				local id = it.GetUniqueId and it:GetUniqueId() or tostring(it)
+				snap[id] = ("%s:%d:%s:%s"):format(kind, t, tostring(it:GetStart()), tostring(it:GetDuration()))
+			end
+		end
+	end
+	return snap
+end
+
+--- Video track above everything under the playhead that has nothing at or after `frame`.
+function LL.findInsertTrack(tl, frame)
+	local n = tl:GetTrackCount("video")
+	local topBusy = 0
+	for t = 1, n do
+		for _, it in ipairs(LL.list(tl:GetItemListInTrack("video", t))) do
+			local a, b = LL.itemSpan(it)
+			if a <= frame and b > frame then topBusy = t break end
+		end
+	end
+	for t = topBusy + 1, n do
+		local clear = not tl:GetIsTrackLocked("video", t) and tl:GetIsTrackEnabled("video", t) ~= false
+		if clear then
+			for _, it in ipairs(LL.list(tl:GetItemListInTrack("video", t))) do
+				local _, b = LL.itemSpan(it)
+				if b > frame then clear = false break end
+			end
+		end
+		if clear then return t, false end
+	end
+	if not tl:AddTrack("video") then LL.fail("Could not add a video track for the title.") end
+	return tl:GetTrackCount("video"), true
+end
+
+--- Insert `template` at the playhead of `tl` (which must be current) with only video track
+--- `track` unlocked. Returns the new item and a report of what happened.
+function LL.lockedInsert(tl, template, track)
+	local saved = {}
+	for _, kind in ipairs(TRACK_TYPES) do
+		saved[kind] = {}
+		local ok, n = pcall(function() return tl:GetTrackCount(kind) end)
+		for t = 1, (ok and tonumber(n) or 0) do
+			saved[kind][t] = tl:GetIsTrackLocked(kind, t) == true
+			tl:SetTrackLock(kind, t, not (kind == "video" and t == track))
+		end
+	end
+	local before = LL.snapshot(tl)
+	local ok, item = pcall(function() return tl:InsertFusionTitleIntoTimeline(template) end)
+	for kind, tracks in pairs(saved) do
+		for t, locked in pairs(tracks) do tl:SetTrackLock(kind, t, locked) end
+	end
+	if not ok then error(item, 0) end
+	local after = LL.snapshot(tl)
+	local moved = 0
+	for id, state in pairs(before) do
+		if after[id] ~= state then moved = moved + 1 end
+	end
+	local report = { moved = moved }
+	if item then
+		local _, t = LL.trackOf(item)
+		report.track, report.start, report.frames = t, item:GetStart(), item:GetDuration()
+	end
+	return item, report
+end
+
+--- Rehearse the locked insert on the scratch timeline once per session.
+function LL.insertModeWorks(ctx, template)
+	if LL._insertMode ~= nil then return LL._insertMode end
+	local scratch = LL.getScratchTimeline(ctx)
+	local ok, pass, detail = pcall(LL.withTimeline, ctx, scratch, function()
+		local fillers = LL.list(scratch:GetItemListInTrack("video", 1))
+		if #fillers == 0 then
+			scratch:InsertFusionTitleIntoTimeline(template)
+			fillers = LL.list(scratch:GetItemListInTrack("video", 1))
+		end
+		local filler = fillers[1]
+		if not filler then return false, "no filler clip" end
+		local rate = scratch:GetSetting("timelineFrameRate")
+		if not rate or rate == "" then rate = ctx.project:GetSetting("timelineFrameRate") end
+		local fps, df = LL.parseFrameRate(rate)
+		local mid = filler:GetStart() + math.floor(filler:GetDuration() / 2)
+		local startTc = LL.timecodeToFrames(scratch:GetStartTimecode(), fps, df) or 0
+		scratch:SetCurrentTimecode(LL.framesToTimecode(mid - scratch:GetStartFrame() + startTc, fps, df))
+		scratch:AddTrack("video")
+		local track = scratch:GetTrackCount("video")
+		local item, rep = LL.lockedInsert(scratch, template, track)
+		local good = item ~= nil and rep.track == track and rep.moved == 0 and math.abs((rep.start or -1) - mid) < 1
+		local msg = ("landed on V%s at %s (wanted V%d at %d), %d other clip(s) moved"):format(
+			tostring(rep.track), tostring(rep.start), track, mid, rep.moved)
+		if item then scratch:DeleteClips({ item }) end
+		pcall(function() scratch:DeleteTrack("video", track) end)
+		return good, msg
+	end)
+	LL._insertMode = ok and pass == true
+	LL._insertDetail = ok and detail or tostring(pass)
+	LL.log("insert rehearsal: %s (%s)", LL._insertMode and "pass" or "fail", tostring(LL._insertDetail))
+	return LL._insertMode
+end
+
+--- Place a real title with Resolve's insert edit, protected by track locks.
+function LL.insertTitle(ctx, preset, opts, playhead)
+	local tl = ctx.timeline
+	local track, added = LL.findInsertTrack(tl, playhead)
+	local item, rep = LL.lockedInsert(tl, preset.template, track)
+	if not item then return nil end
+	if rep.moved > 0 then
+		LL.log("WARNING: inserting %s moved %d clip(s)", preset.template, rep.moved)
+	end
+	LL.customizeTitle(item, preset, opts)
+	return {
+		item = item, track = rep.track or track, addedTrack = added, frames = rep.frames or 0, how = "title",
+		moved = rep.moved, timecode = tl:GetCurrentTimecode(),
+	}
+end
+
 --- Add a title at the playhead without rippling anything.
 function LL.addTitle(preset, opts)
 	local ctx = LL.context()
 	local playhead, fps = LL.playheadFrame(ctx)
 	local frames = math.max(1, math.floor((tonumber(opts.seconds) or 5) * fps + 0.5))
 	opts.fps = fps
+	if LL.insertModeWorks(ctx, preset.template) then
+		local res = LL.insertTitle(ctx, preset, opts, playhead)
+		if res then
+			res.fps = fps
+			res.requested = frames
+			LL.log("inserted %s on V%d at frame %d (%d frames)", preset.template, res.track, playhead, res.frames)
+			return res
+		end
+		LL.log("locked insert returned nothing for %s; falling back", preset.template)
+	end
 	local src = LL.titleSource(ctx, preset)
 	local mpi, compound, scratch, length = src.mpi, nil, nil, src.length
 	if not mpi then
@@ -1343,6 +1498,13 @@ function LL.diagnostics()
 		end
 	end
 
+	step("locked insert rehearsal", function()
+		LL._insertMode = nil
+		local pass = LL.insertModeWorks(ctx, preset.template)
+		say("%s  locked insert: %s - %s", pass and "PASS" or "INFO", tostring(LL._insertDetail),
+			pass and "titles are placed as normal titles" or "titles will be placed as compound clips")
+	end)
+
 	-- 2. Cut transitions: put a media pool clip on the scratch timeline and build a chain.
 	step("cut transition pipeline", function()
 		local clip = LL.firstVideoClip(ctx.mediaPool:GetRootFolder())
@@ -1683,9 +1845,16 @@ function LL.runUI()
 		local p = needPreset()
 		setStatus(("Adding %s..."):format(p.name))
 		local res = LL.addTitle(p, titleOpts())
-		setStatus(("Added %q on V%d at %s (%.1f s)%s%s."):format(p.name, res.track, res.timecode,
+		local msg = ("Added %q on V%d at %s (%.1f s)%s%s."):format(p.name, res.track, res.timecode,
 			res.frames / res.fps, res.addedTrack and " on a new track" or "",
-			res.how == "compound" and " as a compound clip" or ""))
+			res.how == "compound" and " as a compound clip" or "")
+		if res.requested and math.abs(res.frames - res.requested) > 1 then
+			msg = msg .. " Resolve uses its standard title length - drag the end to resize."
+		end
+		if res.moved and res.moved > 0 then
+			msg = ("Added %q, but Resolve shifted %d clip(s) - press Cmd/Ctrl+Z to undo."):format(p.name, res.moved)
+		end
+		setStatus(msg)
 		remember()
 	end
 

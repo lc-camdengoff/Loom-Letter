@@ -149,7 +149,8 @@ end
 
 function M.timeline(tracks, opts)
 	opts = opts or {}
-	local tl = { tracks = tracks, locked = opts.locked or {}, disabled = opts.disabled or {}, selected = opts.selected }
+	local function copy(t) local c = {} for k, v in pairs(t or {}) do c[k] = v end return c end
+	local tl = { tracks = tracks, locked = copy(opts.locked), disabled = copy(opts.disabled), selected = opts.selected }
 	for t, items in pairs(tracks) do
 		for _, it in ipairs(items) do it.track = t end
 	end
@@ -160,7 +161,23 @@ function M.timeline(tracks, opts)
 		for i = #items, 1, -1 do out[#items - i + 1] = items[i] end
 		return out
 	end
-	function tl:GetIsTrackLocked(kind, t) return self.locked[t] == true end
+	function tl:GetIsTrackLocked(kind, t)
+		if kind ~= "video" then return (self.otherLocks or {})[kind .. t] == true end
+		return self.locked[t] == true
+	end
+	function tl:SetTrackLock(kind, t, v)
+		if kind ~= "video" then
+			self.otherLocks = self.otherLocks or {}
+			self.otherLocks[kind .. t] = v
+		else
+			self.locked[t] = v
+		end
+		return true
+	end
+	function tl:DeleteTrack(kind, t)
+		if kind == "video" and self.tracks[t] then table.remove(self.tracks, t) end
+		return true
+	end
 	function tl:GetIsTrackEnabled(kind, t) return self.disabled[t] ~= true end
 	function tl:AddTrack(kind) self.tracks[#self.tracks + 1] = {}; return true end
 	function tl:GetSelectedClips() return self.selected or {} end
@@ -212,17 +229,39 @@ function M.resolve(tracks, opts)
 				end
 			end
 		end
+		function tl:SetCurrentTimecode(tc)
+			local h, m, s, f = tc:match("(%d+):(%d+):(%d+)[:;](%d+)")
+			self.playhead = ((tonumber(h) * 60 + tonumber(m)) * 60 + tonumber(s)) * 24 + tonumber(f)
+			return true
+		end
 		function tl:InsertFusionTitleIntoTimeline(name)
 			assert(project.current == self, "InsertFusionTitleIntoTimeline on a timeline that is not current")
 			if not (opts.templates or {})[name] then return nil end
-			local it = M.item(self.playhead, 120, 1, name)
+			-- "lock_aware": lands on the top unlocked video track and ripples unlocked tracks only
+			-- otherwise: lands on V1 and ripples every track (a Resolve that ignores locks)
+			local track, lockAware = 1, opts.insert_model == "lock_aware"
+			if lockAware then
+				track = nil
+				for t = #self.tracks, 1, -1 do
+					if not self.locked[t] then track = t break end
+				end
+				if not track then return nil end
+			end
+			for t, items in ipairs(self.tracks) do
+				if not (lockAware and self.locked[t]) then
+					for _, other in ipairs(items) do
+						if other.start >= self.playhead then other.start = other.start + 120 end
+					end
+				end
+			end
+			local it = M.item(self.playhead, 120, track, name)
 			it.comps = { M.comp({ inner = { "Title", "NameText", "RoleText", "Accent" } }) }
 			if opts.titles_have_mpi ~= false then
 				it.mpi = { name = name, kind = "title", max_len = opts.title_max_len }
 				function it.mpi:GetName() return self.name end
 				function it.mpi:GetClipProperty() return "Fusion Title" end
 			end
-			table.insert(self.tracks[1], it)
+			table.insert(self.tracks[track], it)
 			env.log[#env.log + 1] = "insert " .. name .. " into " .. self.name
 			return it
 		end
