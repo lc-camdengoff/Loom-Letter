@@ -426,7 +426,7 @@ test("applyUpdate installs changed files, removes stale ones, rewrites the manif
 	LL.paths = { root = rootDir, data = rootDir .. "/LoomLetter" }
 	local fetched = {}
 	LL.download = function(url, dest)
-		local rel = url:sub(#LL.UPDATE_BASE + 1):gsub("%%(%x%x)", function(h) return string.char(tonumber(h, 16)) end)
+		local rel = url:sub(#LL.UPDATE_BASE + 1):gsub("%?.*$", ""):gsub("%%(%x%x)", function(h) return string.char(tonumber(h, 16)) end)
 		fetched[#fetched + 1] = rel
 		local data = read(root .. "/Fusion/" .. rel)
 		if not data then return false end

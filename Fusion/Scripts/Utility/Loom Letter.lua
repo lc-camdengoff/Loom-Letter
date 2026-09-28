@@ -18,7 +18,7 @@ something misbehaves, run "Diagnostics" in the window and send that report along
 ]]
 
 local LL = {}
-LL.VERSION = "0.2.1"
+LL.VERSION = "0.2.2"
 LL.BIN_NAME = "Loom Letter"
 LL.SCRATCH_TIMELINE = "Loom Letter Scratch"
 LL.TOOL_TAG = "LoomLetter"          -- tool:SetData key that marks nodes Loom Letter owns
@@ -1060,7 +1060,8 @@ function LL.checkForUpdate()
 	LL.ensureDir(LL.paths.data)
 	local tmp = LL.join(LL.paths.data, "manifest.remote")
 	os.remove(tmp)
-	if not LL.download(LL.UPDATE_BASE .. "LoomLetter/manifest.txt", tmp) then
+	-- the query string sidesteps GitHub's 5-minute cache so fresh pushes show up immediately
+	if not LL.download(LL.UPDATE_BASE .. "LoomLetter/manifest.txt?t=" .. os.time(), tmp) then
 		LL.fail("Couldn't reach GitHub to check for updates (are you online?).")
 	end
 	local remote = LL.parseManifest(LL.readFile(tmp))
@@ -1080,7 +1081,7 @@ function LL.applyUpdate(check)
 	for i, path in ipairs(check.get) do
 		local tmp = LL.join(stage, tostring(i) .. ".part")
 		os.remove(tmp)
-		if not LL.download(LL.UPDATE_BASE .. url_path(path), tmp) then
+		if not LL.download(LL.UPDATE_BASE .. url_path(path) .. "?t=" .. os.time(), tmp) then
 			for _, s in ipairs(staged) do os.remove(s.tmp) end
 			LL.fail(("Update stopped: couldn't download %s. Nothing was changed."):format(path))
 		end
