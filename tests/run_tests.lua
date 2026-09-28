@@ -614,6 +614,16 @@ test("panel: category filter", function()
 	end)
 end)
 
+test("panel: diagnostics work with no timeline open", function()
+	local env = run_panel({ { mock_item(86400, 100, 1) } }, {}, function(win, w, env, windows)
+		env.project.current = nil
+		env.timeline.name = "gone"
+		win.On.Diag.Clicked({})
+		truthy(status(w):find("iagnostics", 1, true), status(w))
+	end)
+	truthy(find_timeline(env, LL.SCRATCH_TIMELINE), "scratch used instead")
+end)
+
 test("panel: problems are reported in the status line", function()
 	run_panel({ { mock_item(86400, 100, 1) } }, { playhead = 50 }, function(win, w, env)
 		win.On.ModeCuts.Clicked({})

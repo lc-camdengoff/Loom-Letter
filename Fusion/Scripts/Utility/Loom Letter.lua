@@ -18,7 +18,7 @@ something misbehaves, run "Diagnostics" in the window and send that report along
 ]]
 
 local LL = {}
-LL.VERSION = "0.2.0"
+LL.VERSION = "0.2.1"
 LL.BIN_NAME = "Loom Letter"
 LL.SCRATCH_TIMELINE = "Loom Letter Scratch"
 LL.TOOL_TAG = "LoomLetter"          -- tool:SetData key that marks nodes Loom Letter owns
@@ -573,14 +573,14 @@ function LL.resolve()
 	return r
 end
 
-function LL.context()
+function LL.context(allowNoTimeline)
 	local r = LL.resolve()
 	if not r then LL.fail("Loom Letter could not connect to DaVinci Resolve.") end
 	local pm = r:GetProjectManager()
 	local project = pm and pm:GetCurrentProject()
 	if not project then LL.fail("Open a project first.") end
 	local tl = project:GetCurrentTimeline()
-	if not tl then LL.fail("Open a timeline on the Edit page first.") end
+	if not tl and not allowNoTimeline then LL.fail("Open a timeline on the Edit page first.") end
 	return { resolve = r, project = project, timeline = tl, mediaPool = project:GetMediaPool() }
 end
 
@@ -1160,7 +1160,12 @@ function LL.diagnostics()
 	say("INFO  Fusion folder: %s", tostring(LL.paths.root))
 	say("INFO  log file: %s", tostring(LL.paths.log))
 	local ctx
-	if not step("context", function() ctx = LL.context() end) then return lines end
+	if not step("context", function() ctx = LL.context(true) end) then return lines end
+	local userTimeline = ctx.timeline ~= nil
+	if not userTimeline then
+		say("INFO  no timeline is open - testing on the scratch timeline only")
+		if not step("scratch timeline", function() ctx.timeline = LL.getScratchTimeline(ctx) end) then return lines end
+	end
 	local playhead, fps
 	step("playhead", function()
 		playhead, fps = LL.playheadFrame(ctx)
@@ -1269,10 +1274,10 @@ function LL.diagnostics()
 		if not ok then error(err, 0) end
 	end)
 
-	step("selection API", function()
+	if userTimeline then step("selection API", function()
 		local sel = ctx.timeline:GetSelectedClips()
 		say("PASS  Timeline:GetSelectedClips() works (%d selected)", #LL.list(sel))
-	end)
+	end) end
 	if titleItem then pcall(LL.withTimeline, ctx, scratch, function() return scratch:DeleteClips({ titleItem }) end) end
 	say("Done. Your own timeline was not modified.")
 	return lines
