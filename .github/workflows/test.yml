@@ -14,7 +14,8 @@ jobs:
       - name: Generated templates are up to date
         run: |
           python3 tools/build_templates.py
-          git diff --exit-code -- Fusion/Templates
+          python3 tools/build_manifest.py
+          git diff --exit-code -- Fusion/Templates Fusion/LoomLetter/manifest.txt
       - name: Validate templates
         run: luajit tools/validate_settings.lua "Fusion/Templates/Edit/Titles/Loom Letter/"*.setting
       - name: Tests
@@ -25,6 +26,7 @@ jobs:
           ./install.sh
           test -f "$LOOMLETTER_FUSION_DIR/Scripts/Utility/Loom Letter.lua"
           test "$(ls "$LOOMLETTER_FUSION_DIR/Templates/Edit/Titles/Loom Letter" | wc -l)" -eq 26
+          test -f "$LOOMLETTER_FUSION_DIR/LoomLetter/manifest.txt"
           ./install.sh --uninstall
           test ! -e "$LOOMLETTER_FUSION_DIR/Scripts/Utility/Loom Letter.lua"
 

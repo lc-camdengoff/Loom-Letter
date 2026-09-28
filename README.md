@@ -58,6 +58,24 @@ somewhere else.
 
 Uninstall with `bash install.sh --uninstall` or `install.ps1 -Uninstall`.
 
+## Updates
+
+You only need the installer once. After that, Loom Letter updates itself from this repo's
+`main` branch:
+
+- When the panel opens (at most every 12 hours) it checks GitHub. If anything changed, the
+  **Check for Updates** button turns into **Update**; click it to install. You can also click
+  **Check for Updates** any time.
+- Only changed files are downloaded, and presets removed upstream are removed locally. If a
+  download fails, nothing is changed.
+- Close and reopen the panel to use the new version. When titles changed, restart Resolve too,
+  because it only reads the title templates at startup.
+
+**Publishing an update:** change things, run `python3 tools/build_templates.py` (if presets
+changed) and then `python3 tools/build_manifest.py`, then push to `main`. The manifest is
+what the panel compares against, and CI fails if you forget to rebuild it. Anyone who can push
+to `main` can ship code to every install, so keep that branch protected.
+
 ## First run: Diagnostics
 
 Open a project and a timeline, then open **Workspace > Scripts > Loom Letter** and click

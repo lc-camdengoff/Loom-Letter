@@ -24,6 +24,7 @@ $logs     = Join-Path $fusion 'LoomLetter\logs'
 if ($Uninstall) {
     Remove-Item -Force -ErrorAction SilentlyContinue $script
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $titles, $previews
+    Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $fusion 'LoomLetter\manifest.txt')
     Write-Host "Loom Letter removed from $fusion"
     Write-Host "(logs are kept in $logs)"
     Write-Host 'Restart DaVinci Resolve to finish.'
@@ -43,6 +44,8 @@ Copy-Item -Force (Join-Path $src 'Scripts\Utility\Loom Letter.lua') $script
 Get-ChildItem -Path $titles -Filter '*.setting' -ErrorAction SilentlyContinue | Remove-Item -Force
 Copy-Item -Force (Join-Path $src 'Templates\Edit\Titles\Loom Letter\*.setting') $titles
 Copy-Item -Force (Join-Path $src 'LoomLetter\previews\*.png') $previews
+# lets the panel's "Check for Updates" know what is installed
+Copy-Item -Force (Join-Path $src 'LoomLetter\manifest.txt') (Join-Path $fusion 'LoomLetter\manifest.txt')
 
 $count = (Get-ChildItem -Path $titles -Filter '*.setting').Count
 Write-Host "Loom Letter installed to $fusion"

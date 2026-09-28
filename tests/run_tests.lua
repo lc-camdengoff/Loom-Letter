@@ -366,6 +366,90 @@ test("titleChanges converts numbers and passes the frame rate", function()
 	eq(got["Right.Font"], "Inter", "font goes to both words")
 end)
 
+-- ---------------------------------------------------------------------------------------
+-- Updater
+-- ---------------------------------------------------------------------------------------
+
+local function read(path)
+	local f = io.open(path, "rb")
+	if not f then return nil end
+	local s = f:read("*a")
+	f:close()
+	return s
+end
+
+local function write(path, s)
+	local f = assert(io.open(path, "wb"))
+	f:write(s)
+	f:close()
+end
+
+test("manifest parsing and update planning", function()
+	local m = LL.parseManifest("version 1.2.3\r\naaa1  Scripts/Utility/Loom Letter.lua\nbbb2  LoomLetter/previews/x.png\n")
+	eq(m.version, "1.2.3"); eq(m.count, 2); eq(m.files["LoomLetter/previews/x.png"], "bbb2")
+	eq(LL.parseManifest("garbage"), nil)
+	local remote = LL.parseManifest(table.concat({
+		"version 2", "a1  Scripts/Utility/Loom Letter.lua", "b2  Templates/Edit/Titles/Loom Letter/LL New.setting",
+		"c3  LoomLetter/previews/same.png", "d4  ../../etc/passwd", "e5  Scripts/Utility/Other.lua",
+	}, "\n"))
+	local localM = LL.parseManifest(table.concat({
+		"version 1", "a0  Scripts/Utility/Loom Letter.lua", "c3  LoomLetter/previews/same.png",
+		"f6  Templates/Edit/Titles/Loom Letter/LL Old.setting",
+	}, "\n"))
+	local get, remove = LL.planUpdate(localM, remote)
+	eq(table.concat(get, ","), "Scripts/Utility/Loom Letter.lua,Templates/Edit/Titles/Loom Letter/LL New.setting",
+		"changed + new files only; unsafe paths refused")
+	eq(table.concat(remove, ","), "Templates/Edit/Titles/Loom Letter/LL Old.setting")
+	get = LL.planUpdate(nil, remote)
+	eq(#get, 3, "fresh install downloads every safe file")
+end)
+
+test("applyUpdate installs changed files, removes stale ones, rewrites the manifest", function()
+	local base = os.tmpname()
+	os.remove(base)
+	local rootDir = base .. "-ll"
+	os.execute("mkdir -p '" .. rootDir .. "/LoomLetter' '" .. rootDir .. "/Templates/Edit/Titles/Loom Letter'")
+	local stale = rootDir .. "/Templates/Edit/Titles/Loom Letter/LL Gone.setting"
+	write(stale, "old")
+	local remoteText = assert(read(root .. "/Fusion/LoomLetter/manifest.txt"))
+	local remote = LL.parseManifest(remoteText)
+	-- local install: everything current except the panel script, plus a template that was removed upstream
+	local lines = { "version 0.0.1" }
+	for path, hash in pairs(remote.files) do
+		if path ~= "Scripts/Utility/Loom Letter.lua" and not path:find("%.png$") then
+			lines[#lines + 1] = hash .. "  " .. path
+		end
+	end
+	lines[#lines + 1] = "0000  Templates/Edit/Titles/Loom Letter/LL Gone.setting"
+	write(rootDir .. "/LoomLetter/manifest.txt", table.concat(lines, "\n"))
+	local saved_paths, saved_download = LL.paths, LL.download
+	LL.paths = { root = rootDir, data = rootDir .. "/LoomLetter" }
+	local fetched = {}
+	LL.download = function(url, dest)
+		local rel = url:sub(#LL.UPDATE_BASE + 1):gsub("%%(%x%x)", function(h) return string.char(tonumber(h, 16)) end)
+		fetched[#fetched + 1] = rel
+		local data = read(root .. "/Fusion/" .. rel)
+		if not data then return false end
+		write(dest, data)
+		return true
+	end
+	local ok, res = pcall(function()
+		local check = LL.checkForUpdate()
+		truthy(check.available, "update detected")
+		return LL.applyUpdate(check)
+	end)
+	LL.paths, LL.download = saved_paths, saved_download
+	truthy(ok, tostring(res))
+	truthy(res.installed and res.titlesChanged)
+	eq(read(rootDir .. "/Scripts/Utility/Loom Letter.lua"), read(SCRIPT), "script updated")
+	truthy(read(rootDir .. "/LoomLetter/previews/title-pop.png"), "previews downloaded")
+	eq(read(stale), nil, "removed preset deleted")
+	eq(LL.localManifest and LL.parseManifest(read(rootDir .. "/LoomLetter/manifest.txt")).version, remote.version)
+	local again = LL.planUpdate(LL.parseManifest(read(rootDir .. "/LoomLetter/manifest.txt")), remote)
+	eq(#again, 0, "nothing left to update")
+	os.execute("rm -rf '" .. rootDir .. "'")
+end)
+
 test("preset names are unique", function()
 	for _, list in ipairs({ LL.TITLES, LL.CUTS }) do
 		local seen = {}

@@ -30,6 +30,7 @@ previews="$fusion/LoomLetter/previews"
 if [[ "${1:-}" == "--uninstall" ]]; then
 	rm -f "$script"
 	rm -rf "$titles" "$previews"
+	rm -f "$fusion/LoomLetter/manifest.txt"
 	echo "Loom Letter removed from $fusion"
 	echo "(logs are kept in $fusion/LoomLetter/logs)"
 	echo "Restart DaVinci Resolve to finish."
@@ -47,6 +48,8 @@ cp "$src/Scripts/Utility/Loom Letter.lua" "$script"
 rm -f "$titles"/*.setting
 cp "$src/Templates/Edit/Titles/Loom Letter/"*.setting "$titles/"
 cp "$src/LoomLetter/previews/"*.png "$previews/"
+# lets the panel's "Check for Updates" know what is installed
+cp "$src/LoomLetter/manifest.txt" "$fusion/LoomLetter/manifest.txt"
 
 count=$(find "$titles" -name '*.setting' | wc -l | tr -d ' ')
 echo "Loom Letter installed to $fusion"

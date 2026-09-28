@@ -1,0 +1,60 @@
+version 0.2.0
+9a70d5f7e59ca9b285dc677783045d0180b9dbc5  Scripts/Utility/Loom Letter.lua
+c7ce53783bf3b7ab09fef8e97182f775edda0297  Templates/Edit/Titles/Loom Letter/LL Bar Stat.setting
+7c7894078501ae70fad9086f786ca86f89935b6d  Templates/Edit/Titles/Loom Letter/LL Blur In.setting
+09414b207f552e43727e08c157ca2e2c3b44e7c2  Templates/Edit/Titles/Loom Letter/LL Boxed Title.setting
+eaeb94809bcb14da3dbcf72a8ded7b2820ea816a  Templates/Edit/Titles/Loom Letter/LL Chat Bubble.setting
+e57b00aa61a29c7856ab761975d8594cab45a953  Templates/Edit/Titles/Loom Letter/LL Circle Pop.setting
+f0a9f687698507ec40eeb8c08c93100eb986c614  Templates/Edit/Titles/Loom Letter/LL Converge.setting
+4398e37c7dd678166623c2fdb5931b72098bea91  Templates/Edit/Titles/Loom Letter/LL Countdown.setting
+08717c6a7c63e53746a3b33011843c0e01ef72b3  Templates/Edit/Titles/Loom Letter/LL Counter.setting
+8f4dd1b939eb92b91490d64a0e3d424c3960d670  Templates/Edit/Titles/Loom Letter/LL Credits.setting
+91294c3fc44269f34b8209cac9e6d1516a6834f6  Templates/Edit/Titles/Loom Letter/LL Flicker.setting
+e1745cdbf445160742c3a12215ba9d89d1c1e151  Templates/Edit/Titles/Loom Letter/LL Follow.setting
+0c58fa30f2b5102fc95e32c064147db997bddb1a  Templates/Edit/Titles/Loom Letter/LL Glow.setting
+5000dda6f979d01fbe8af427e4fe3fa653d1394e  Templates/Edit/Titles/Loom Letter/LL Handle.setting
+be3fae12e894c9d14cc2fab8020300e99143939e  Templates/Edit/Titles/Loom Letter/LL Lower Third.setting
+bde7aae1e4ad67a7a491290185cc0bff7e7a6c94  Templates/Edit/Titles/Loom Letter/LL Pop.setting
+bbeb31eee608d2beacdafbfb29c227c3ccb784b4  Templates/Edit/Titles/Loom Letter/LL Progress Bar.setting
+1a064234040fb38dadfe6b4396067188767490bc  Templates/Edit/Titles/Loom Letter/LL Ring Burst.setting
+8a2e0fb6623d17c9a43f39f0e84c306c03e44638  Templates/Edit/Titles/Loom Letter/LL Slide Up.setting
+814087b7dc1fd5540e97195d089da6d3b76600e7  Templates/Edit/Titles/Loom Letter/LL Sparkle.setting
+c8f6ed80cc44164252dfa5b8835bdf171ff8be60  Templates/Edit/Titles/Loom Letter/LL Speed Lines.setting
+f54757fa6e6c018b27396fd146d26614f869a6eb  Templates/Edit/Titles/Loom Letter/LL Split Word.setting
+385e5ad5dd8d00b17cfaf779d6a08725c36eed28  Templates/Edit/Titles/Loom Letter/LL Subscribe.setting
+7d0da4f8ed84377aa055cdfbe92898ada74c9622  Templates/Edit/Titles/Loom Letter/LL Tag Title.setting
+6e5545465131ad958e9f03404da38d72cda510e5  Templates/Edit/Titles/Loom Letter/LL Tracking.setting
+2149463cc7a752c96bd226daf7b09e2d758f2be5  Templates/Edit/Titles/Loom Letter/LL Typewriter.setting
+11572eb3c8cafe9e9e733e12045c91524df640a5  Templates/Edit/Titles/Loom Letter/LL Underline.setting
+8c303c87e97cb5fd5719ae591946c56eb046a07c  LoomLetter/previews/cut-blur.png
+96f53a7f15ad725adc118c5b5202c78deeb7a37c  LoomLetter/previews/cut-flash.png
+416c2087a7d78753f6c3aa73e61df96be0b263fe  LoomLetter/previews/cut-spin.png
+9aa034833f41899c09979b7978fa002fc87c987e  LoomLetter/previews/cut-whip.png
+0f9db2bc3d5f1e231d6a7147873ef723f87223d9  LoomLetter/previews/cut-zoom-in.png
+0cb55e9093da14ff1304f85b47d2b6ecc095d069  LoomLetter/previews/cut-zoom-out.png
+65dd23a31880aeca07b4d3afbb612daf737b67b3  LoomLetter/previews/title-bar-stat.png
+352502d61d4e00f71326edcce37b770c2410ae6a  LoomLetter/previews/title-blur-in.png
+aae9c3c0c4a3b7297358dbfae97f89f6ac1d0911  LoomLetter/previews/title-boxed-title.png
+5e8acf8eb205f5f2c4a0b1607f281a81ef1ab9e9  LoomLetter/previews/title-chat-bubble.png
+fca1ddbdeb9389d173a4c0bfb17cb7b125f124af  LoomLetter/previews/title-circle-pop.png
+4de41c77a122cccd05675a93e3411b8a215ccb5e  LoomLetter/previews/title-converge.png
+08b1c56c37692a73ffe39219dea856369dce0dab  LoomLetter/previews/title-countdown.png
+1faff1c4d6c92064c55b2719a51a70b145cbb11c  LoomLetter/previews/title-counter.png
+099895645054e477fab7a73c71e2bf9e5edf8011  LoomLetter/previews/title-credits.png
+3d949af9fb0ecca9c3d38915b4323133507eb6e2  LoomLetter/previews/title-flicker.png
+c1d4f101f1225fade510f67de2ad76629cae867b  LoomLetter/previews/title-follow.png
+43561bfa950941aee662ed6546d18648a49e627c  LoomLetter/previews/title-glow.png
+572f8ae9c2d9d4e92a2fdff9043a1c6fd899a904  LoomLetter/previews/title-handle.png
+f74fad13fa1623f06d545886d8c7077bd731bf65  LoomLetter/previews/title-lower-third.png
+accae885c1551f2e1b2120be2082077f7f5283c2  LoomLetter/previews/title-pop.png
+282f009863e831c32e65742ef1e5a6246d7ac360  LoomLetter/previews/title-progress-bar.png
+71a8a6d2129efb14ccdac6ffc62875ec7dc4cf7d  LoomLetter/previews/title-ring-burst.png
+94cb7103a29d20e47e8b863e63774ef7a252d957  LoomLetter/previews/title-slide-up.png
+38b4c6af2ad69ab24e574eaebd001f910c5328fc  LoomLetter/previews/title-sparkle.png
+6eb58a9e034eac0bd2e2dcfcce19f323c03296aa  LoomLetter/previews/title-speed-lines.png
+28f4768c15ae37741774952fac27252a474c9c8e  LoomLetter/previews/title-split-word.png
+6ab1b3573cbbe348edf36796c4569a6a39baab56  LoomLetter/previews/title-subscribe.png
+f01db82afea7e570b8bc7c18691977ff5de8da84  LoomLetter/previews/title-tag-title.png
+d9309c52b9231a15088b086b6eec96de776eb80a  LoomLetter/previews/title-tracking.png
+01e46739b35bdc15bb585c092136cb56002473ad  LoomLetter/previews/title-typewriter.png
+c0b8de3131d03053ccde8658f227dce031d67603  LoomLetter/previews/title-underline.png

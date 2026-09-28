@@ -18,12 +18,14 @@ something misbehaves, run "Diagnostics" in the window and send that report along
 ]]
 
 local LL = {}
-LL.VERSION = "0.1.0"
+LL.VERSION = "0.2.0"
 LL.BIN_NAME = "Loom Letter"
 LL.SCRATCH_TIMELINE = "Loom Letter Scratch"
 LL.TOOL_TAG = "LoomLetter"          -- tool:SetData key that marks nodes Loom Letter owns
 LL.PREFS_KEY = "LoomLetter.Prefs"
 LL.CUT_SEARCH_SECONDS = 2           -- how far from the playhead to look for a cut
+LL.UPDATE_BASE = "https://raw.githubusercontent.com/lc-camdengoff/Loom-Letter/main/Fusion/"
+LL.UPDATE_INTERVAL = 12 * 3600      -- automatic update checks at most this often (seconds)
 
 local IS_WINDOWS = package and package.config and package.config:sub(1, 1) == "\\"
 
@@ -978,6 +980,141 @@ function LL.removeFromSelection()
 end
 
 -- ---------------------------------------------------------------------------------------
+-- Updates: pull changed files from GitHub (see tools/build_manifest.py)
+-- ---------------------------------------------------------------------------------------
+
+--- "version X\n<sha1>  <path>\n..." -> { version = "X", files = { [path] = sha1 }, count = n }
+function LL.parseManifest(text)
+	local m = { files = {}, count = 0 }
+	for line in tostring(text or ""):gmatch("[^\r\n]+") do
+		local v = line:match("^version%s+(%S+)")
+		if v then
+			m.version = v
+		else
+			local hash, path = line:match("^(%x+)%s+(.+)$")
+			if hash then
+				m.files[path] = hash
+				m.count = m.count + 1
+			end
+		end
+	end
+	if not m.version or m.count == 0 then return nil end
+	return m
+end
+
+--- Only files Loom Letter owns may be written or deleted by an update.
+function LL.safeUpdatePath(path)
+	if path:find("%.%.") or path:find("^[/\\]") or path:find(":") then return false end
+	return path == "Scripts/Utility/Loom Letter.lua"
+		or path:match("^Templates/Edit/Titles/Loom Letter/[^/]+%.setting$") ~= nil
+		or path:match("^LoomLetter/previews/[^/]+%.png$") ~= nil
+end
+
+--- Files to download (new or changed) and to delete (gone from the remote manifest).
+function LL.planUpdate(localM, remoteM)
+	local get, remove = {}, {}
+	local have = localM and localM.files or {}
+	for path, hash in pairs(remoteM.files) do
+		if LL.safeUpdatePath(path) and have[path] ~= hash then get[#get + 1] = path end
+	end
+	for path in pairs(have) do
+		if remoteM.files[path] == nil and LL.safeUpdatePath(path) then remove[#remove + 1] = path end
+	end
+	table.sort(get)
+	table.sort(remove)
+	return get, remove
+end
+
+local function shell_quote(s)
+	if IS_WINDOWS then return '"' .. s:gsub("/", "\\") .. '"' end
+	return "'" .. s:gsub("'", "'\\''") .. "'"
+end
+
+local function url_path(p)
+	return (p:gsub("[^%w%-%._/]", function(c) return ("%%%02X"):format(c:byte()) end))
+end
+
+--- Download with curl (bundled with macOS and Windows 10+). Returns true on success.
+function LL.download(url, dest)
+	local cmd = ("curl -fsSL --max-time 30 -o %s %s"):format(shell_quote(dest), shell_quote(url))
+	if IS_WINDOWS then cmd = '"' .. cmd .. '"' end -- cmd.exe strips one outer pair of quotes
+	local r = os.execute(cmd)
+	return (r == 0 or r == true) and LL.fileExists(dest)
+end
+
+function LL.readFile(path)
+	local f = io.open(path, "rb")
+	if not f then return nil end
+	local s = f:read("*a")
+	f:close()
+	return s
+end
+
+function LL.localManifest()
+	return LL.parseManifest(LL.readFile(LL.join(LL.paths.data or "?", "manifest.txt")))
+end
+
+--- Returns remote manifest plus the plan, or raises a user error.
+function LL.checkForUpdate()
+	if not LL.paths.data then LL.fail("Can't find the Loom Letter install folder.") end
+	LL.ensureDir(LL.paths.data)
+	local tmp = LL.join(LL.paths.data, "manifest.remote")
+	os.remove(tmp)
+	if not LL.download(LL.UPDATE_BASE .. "LoomLetter/manifest.txt", tmp) then
+		LL.fail("Couldn't reach GitHub to check for updates (are you online?).")
+	end
+	local remote = LL.parseManifest(LL.readFile(tmp))
+	os.remove(tmp)
+	if not remote then LL.fail("The update manifest on GitHub couldn't be read.") end
+	local get, remove = LL.planUpdate(LL.localManifest(), remote)
+	return { remote = remote, get = get, remove = remove, available = #get + #remove > 0 }
+end
+
+--- Download every changed file first, then move them into place, then write the manifest.
+function LL.applyUpdate(check)
+	check = check or LL.checkForUpdate()
+	if not check.available then return check end
+	local stage = LL.join(LL.paths.data, "update")
+	LL.ensureDir(stage)
+	local staged = {}
+	for i, path in ipairs(check.get) do
+		local tmp = LL.join(stage, tostring(i) .. ".part")
+		os.remove(tmp)
+		if not LL.download(LL.UPDATE_BASE .. url_path(path), tmp) then
+			for _, s in ipairs(staged) do os.remove(s.tmp) end
+			LL.fail(("Update stopped: couldn't download %s. Nothing was changed."):format(path))
+		end
+		staged[#staged + 1] = { tmp = tmp, path = path }
+	end
+	local titlesChanged = false
+	for _, s in ipairs(staged) do
+		local dest = LL.join(LL.paths.root, s.path)
+		LL.ensureDir((dest:gsub("/[^/]+$", "")))
+		os.remove(dest)
+		local ok, err = os.rename(s.tmp, dest)
+		if not ok then LL.fail(("Couldn't install %s: %s"):format(s.path, tostring(err))) end
+		if s.path:find("^Templates/") then titlesChanged = true end
+	end
+	for _, path in ipairs(check.remove) do
+		os.remove(LL.join(LL.paths.root, path))
+		if path:find("^Templates/") then titlesChanged = true end
+	end
+	local f = io.open(LL.join(LL.paths.data, "manifest.txt"), "wb")
+	if f then
+		f:write("version ", check.remote.version, "\n")
+		local paths = {}
+		for path in pairs(check.remote.files) do paths[#paths + 1] = path end
+		table.sort(paths)
+		for _, path in ipairs(paths) do f:write(check.remote.files[path], "  ", path, "\n") end
+		f:close()
+	end
+	check.titlesChanged = titlesChanged
+	check.installed = true
+	LL.log("updated to %s: %d file(s) downloaded, %d removed", check.remote.version, #check.get, #check.remove)
+	return check
+end
+
+-- ---------------------------------------------------------------------------------------
 -- Diagnostics: exercises the assumptions Loom Letter makes, on the scratch timeline only
 -- ---------------------------------------------------------------------------------------
 
@@ -1252,6 +1389,7 @@ function LL.runUI()
 		ui:HGroup{
 			Weight = 0,
 			ui:Label{ ID = "Status", Weight = 1, WordWrap = true, Text = "Ready." },
+			ui:Button{ ID = "Update", Text = "Check for Updates", Weight = 0 },
 			ui:Button{ ID = "Diag", Text = "Diagnostics", Weight = 0 },
 		},
 	})
@@ -1426,6 +1564,7 @@ function LL.runUI()
 		LL.savePrefs({
 			mode = state.mode, seconds = o.seconds, font = o.font, style = o.style, color = o.color, accent = o.accent,
 			cutFrames = c.frames, cutIntensity = c.intensity, cutDirection = c.direction, cutMotionBlur = c.motionBlur,
+			lastUpdateCheck = prefs.lastUpdateCheck,
 		})
 	end
 
@@ -1518,7 +1657,47 @@ function LL.runUI()
 			or ("Diagnostics found %d problem(s) - see the report window and the log."):format(fails))
 	end)
 
+	local function updateMessage(res)
+		if res.installed then
+			return ("Updated to %s. Close and reopen Loom Letter%s."):format(res.remote.version,
+				res.titlesChanged and ", and restart Resolve so it picks up the new titles" or "")
+		end
+		return ("Update %s is available (%d file(s)). Click Update to install it."):format(res.remote.version, #res.get + #res.remove)
+	end
+
+	win.On.Update.Clicked = guarded("Update", function()
+		if state.pendingUpdate then
+			setStatus("Installing update...")
+			local res = LL.applyUpdate(state.pendingUpdate)
+			state.pendingUpdate = nil
+			itm.Update.Text = "Check for Updates"
+			setStatus(updateMessage(res))
+			return
+		end
+		setStatus("Checking for updates...")
+		local res = LL.checkForUpdate()
+		prefs.lastUpdateCheck = os.time()
+		if res.available then
+			state.pendingUpdate = res
+			itm.Update.Text = "Update"
+			setStatus(updateMessage(res))
+		else
+			setStatus(("Loom Letter is up to date (%s)."):format(LL.VERSION))
+		end
+	end)
+
 	setMode(state.mode)
+	-- quiet automatic check, at most every LL.UPDATE_INTERVAL
+	if os.time() - (tonumber(prefs.lastUpdateCheck) or 0) > LL.UPDATE_INTERVAL then
+		local ok, res = pcall(LL.checkForUpdate)
+		prefs.lastUpdateCheck = os.time()
+		LL.savePrefs(prefs)
+		if ok and res.available then
+			state.pendingUpdate = res
+			itm.Update.Text = "Update"
+			setStatus(updateMessage(res))
+		end
+	end
 	win:Show()
 	disp:RunLoop()
 	win:Hide()
