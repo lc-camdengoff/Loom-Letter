@@ -273,6 +273,201 @@ def cut_blur(c: Card):
     c.paste(layer, alpha=0.28, blur=3)
 
 
+
+# ------------------------------------------------------------------------------------------
+# Library presets
+# ------------------------------------------------------------------------------------------
+
+RED = (220, 30, 30)
+BLUE = (30, 140, 250)
+DARKC = (20, 20, 26)
+
+
+def outline(c, box, color, width=3, radius=0):
+    d = c.draw()
+    d.rounded_rectangle(tuple(v * SS for v in box), radius=radius * SS, outline=color + (255,), width=width * SS)
+
+
+def text_width(c, s, size, kind="bold"):
+    return c.draw().textlength(s, font=c.font(kind, size)) / SS
+
+
+def pill(c, cx, cy, w, h, color, alpha=1.0):
+    c.rect((cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2), color, alpha=alpha, radius=h / 2)
+
+
+def ellipse(c, cx, cy, r, fill=None, outline_color=None, width=3, alpha=1.0, blur=0.0):
+    layer = c.layer()
+    d = ImageDraw.Draw(layer)
+    box = ((cx - r) * SS, (cy - r) * SS, (cx + r) * SS, (cy + r) * SS)
+    if fill:
+        d.ellipse(box, fill=fill + (255,))
+    if outline_color:
+        d.ellipse(box, outline=outline_color + (255,), width=int(width * SS))
+    c.paste(layer, alpha, blur)
+
+
+def title_boxed_title(c):
+    w = text_width(c, "MOTION GRAPHICS", 40) + 48
+    outline(c, (320 - w / 2, 150, 320 + w / 2, 210), ACCENT, 3)
+    c.text("MOTION GRAPHICS", 320, 180, 40)
+    c.rect((250, 200, 390, 222), ACCENT, radius=3)
+    c.text("WITHOUT HASSLE", 320, 211, 13, fill=DARKC)
+
+
+def title_tag_title(c):
+    c.rect((245, 132, 395, 156), ACCENT, radius=3)
+    c.text("WITHOUT HASSLE", 320, 144, 14, fill=DARKC)
+    c.text("MOTION GRAPHICS", 320, 190, 44)
+
+
+def title_split_word(c):
+    c.text("MISTER", 310, 180, 50, fill=ACCENT, anchor="rm")
+    c.rect((318, 150, 322, 210), (255, 255, 255))
+    c.text("HORSE", 330, 180, 50, anchor="lm")
+
+
+def title_underline(c):
+    c.text("POWERFUL WORKFLOW", 320, 170, 40)
+    c.rect((150, 204, 490, 211), ACCENT, radius=3)
+
+
+def social_button(c, label, color):
+    w = text_width(c, label, 28) + 80
+    pill(c, 320, 180, w, 60, color)
+    c.text(label, 320, 180, 28)
+    d = c.draw()
+    x, y = (320 + w / 2 - 30) * SS, 196 * SS
+    d.polygon([(x, y), (x, y + 34 * SS), (x + 9 * SS, y + 26 * SS), (x + 16 * SS, y + 40 * SS),
+               (x + 22 * SS, y + 37 * SS), (x + 15 * SS, y + 24 * SS), (x + 26 * SS, y + 24 * SS)],
+              fill=(255, 255, 255, 255), outline=(0, 0, 0, 255))
+
+
+def title_handle(c):
+    pill(c, 320, 180, 300, 56, (255, 255, 255))
+    ellipse(c, 200, 180, 18, fill=ACCENT)
+    c.text("@yourname", 232, 180, 26, fill=DARKC, anchor="lm")
+
+
+def title_chat_bubble(c):
+    d = c.draw()
+    d.polygon([(232 * SS, 196 * SS), (222 * SS, 222 * SS), (256 * SS, 204 * SS)], fill=(255, 255, 255, 255))
+    pill(c, 320, 180, 220, 58, (255, 255, 255))
+    c.text("What's up?", 320, 180, 26, kind="regular", fill=DARKC)
+    pill(c, 420, 110, 90, 40, (140, 60, 230))
+    c.text("Hey!", 420, 110, 18)
+
+
+def title_counter(c):
+    c.text("$38,458", 320, 180, 76)
+
+
+def title_countdown(c):
+    c.rect((215, 130, 425, 230), (30, 30, 36), radius=18)
+    c.text("00:05", 320, 172, 56)
+    c.rect((255, 208, 385, 212), (80, 80, 88), radius=2)
+    c.rect((255, 208, 330, 212), ACCENT, radius=2)
+
+
+def title_progress_bar(c):
+    c.text("1980 VOTES", 160, 150, 20, anchor="lm")
+    c.text("80%", 480, 150, 20, anchor="rm")
+    c.rect((160, 170, 480, 186), (70, 70, 80), radius=8)
+    c.rect((160, 170, 416, 186), ACCENT, radius=8)
+
+
+def title_bar_stat(c):
+    c.rect((230, 110, 270, 250), (60, 60, 70), radius=2)
+    c.rect((230, 138, 270, 250), (25, 190, 230), radius=2)
+    c.text("80%", 292, 176, 64, anchor="lm")
+    c.text("YOUR TITLE", 294, 228, 20, anchor="lm")
+
+
+def title_glow(c):
+    c.text("HORSE OF STEEL", 320, 180, 40, kind="regular", spacing=10, fill=(255, 230, 190), alpha=0.9, blur=14)
+    c.text("HORSE OF STEEL", 320, 180, 40, kind="regular", spacing=10)
+
+
+def title_credits(c):
+    c.text("Created by", 320, 146, 18, kind="regular", fill=(200, 200, 200))
+    c.text("Mister Horse", 320, 188, 48, kind="regular")
+
+
+def title_flicker(c):
+    word = "PARADOX"
+    f = c.font("regular", 58)
+    widths = [c.draw().textlength(ch, font=f) / SS + 16 for ch in word]
+    x = 320 - sum(widths) / 2
+    for i, (ch, w) in enumerate(zip(word, widths)):
+        a = 0.15 if i in (1, 4) else 1.0
+        c.text(ch, x + w / 2, 180, 58, kind="regular", alpha=a)
+        if a == 1.0:
+            c.text(ch, x + w / 2, 180, 58, kind="regular", alpha=0.5, blur=8)
+        x += w
+
+
+def title_converge(c):
+    c.text("GRAND TITLES", 320, 150, 46, alpha=0.2, blur=3)
+    c.text("GRAND TITLES", 320, 210, 46, alpha=0.2, blur=3)
+    c.rect((170, 179, 470, 181), ACCENT)
+    c.text("GRAND TITLES", 320, 180, 46)
+
+
+def title_ring_burst(c):
+    ellipse(c, 320, 180, 110, outline_color=(255, 255, 255), width=2, alpha=0.35)
+    ellipse(c, 320, 180, 78, outline_color=(255, 255, 255), width=6, alpha=0.75)
+    ellipse(c, 320, 180, 44, outline_color=(255, 255, 255), width=12)
+
+
+def title_sparkle(c):
+    layer = c.layer()
+    d = ImageDraw.Draw(layer)
+    for cx, cy, r in ((320, 180, 80), (430, 120, 30), (220, 245, 22)):
+        pts = []
+        for i in range(8):
+            ang = math.radians(i * 45 - 90)
+            rr = r if i % 2 == 0 else r * 0.16
+            pts.append(((cx + rr * math.cos(ang)) * SS, (cy + rr * math.sin(ang)) * SS))
+        d.polygon(pts, fill=(255, 255, 255, 255))
+    c.paste(layer, 0.6, blur=6)
+    c.paste(layer)
+
+
+def title_speed_lines(c):
+    d = c.draw()
+    for i, (x, y, ln) in enumerate(((150, 130, 180), (230, 165, 240), (190, 205, 150), (290, 240, 200))):
+        col = ACCENT if i % 2 == 0 else (255, 255, 255)
+        d.line([(x * SS, y * SS), ((x + ln) * SS, (y + ln * 0.25) * SS)], fill=col + (255,), width=6 * SS)
+
+
+def title_circle_pop(c):
+    ellipse(c, 320, 180, 100, outline_color=(255, 255, 255), width=4, alpha=0.6)
+    ellipse(c, 320, 180, 56, fill=ACCENT)
+
+
+LIBRARY_PREVIEWS = {
+    "title-boxed-title.png": title_boxed_title,
+    "title-tag-title.png": title_tag_title,
+    "title-split-word.png": title_split_word,
+    "title-underline.png": title_underline,
+    "title-subscribe.png": lambda c: social_button(c, "SUBSCRIBE", RED),
+    "title-follow.png": lambda c: social_button(c, "+  FOLLOW", BLUE),
+    "title-handle.png": title_handle,
+    "title-chat-bubble.png": title_chat_bubble,
+    "title-counter.png": title_counter,
+    "title-countdown.png": title_countdown,
+    "title-progress-bar.png": title_progress_bar,
+    "title-bar-stat.png": title_bar_stat,
+    "title-glow.png": title_glow,
+    "title-credits.png": title_credits,
+    "title-flicker.png": title_flicker,
+    "title-converge.png": title_converge,
+    "title-ring-burst.png": title_ring_burst,
+    "title-sparkle.png": title_sparkle,
+    "title-speed-lines.png": title_speed_lines,
+    "title-circle-pop.png": title_circle_pop,
+}
+
 PREVIEWS = {
     "title-slide-up.png": title_slide_up,
     "title-blur-in.png": title_blur_in,
@@ -287,6 +482,7 @@ PREVIEWS = {
     "cut-flash.png": cut_flash,
     "cut-blur.png": cut_blur,
 }
+PREVIEWS.update(LIBRARY_PREVIEWS)
 
 
 def main():
@@ -303,7 +499,7 @@ def main():
 
 def contact_sheet():
     """docs/presets.png: every card on one image for the README."""
-    cols, tw, th, gap = 4, 320, 180, 12
+    cols, tw, th, gap = 6, 320, 180, 12
     names = list(PREVIEWS)
     rows = math.ceil(len(names) / cols)
     sheet = Image.new("RGB", (cols * tw + (cols + 1) * gap, rows * th + (rows + 1) * gap), (12, 13, 17))

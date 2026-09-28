@@ -39,6 +39,10 @@ V.KNOWN_INPUTS = {
 	Blur = { "Input", "XBlurSize", "YBlurSize", "LockXY", "EffectMask" },
 	RectangleMask = {
 		"Center", "Width", "Height", "SoftEdge", "CornerRadius", "Angle", "Invert", "Level",
+		"BorderWidth", "Solid",
+	},
+	EllipseMask = {
+		"Center", "Width", "Height", "SoftEdge", "Angle", "Invert", "Level", "BorderWidth", "Solid",
 	},
 	BrightnessContrast = { "Input", "Gain", "Brightness", "Contrast", "Gamma", "Saturation" },
 }
@@ -302,9 +306,12 @@ function V.check_animation(macro, rs, re)
 	end
 	local keys = {}
 	local reveals_text = false -- e.g. a typewriter hides the title by typing, not by fading
+	local has_vis, bursts = false, false
 	for k in pairs(series) do
 		keys[#keys + 1] = k
 		if k:match("%.StyledText$") then reveals_text = true end
+		if k:match("%.Vis$") then has_vis = true end
+		if k:match("%.P$") then bursts = true end
 	end
 	table.sort(keys)
 	for _, k in ipairs(keys) do
@@ -312,7 +319,12 @@ function V.check_animation(macro, rs, re)
 		for i, v in ipairs(series[k]) do parts[i] = fmt(v) end
 		lines[#lines + 1] = ("    %-28s %s"):format(k, table.concat(parts, "  "))
 		local s = series[k]
-		if k:match("%.Blend$") and type(s[1]) == "number" then
+		if k:match("%.Vis$") then
+			if s[1] > 0.05 then errors[#errors + 1] = k .. " should start at 0 (hidden on the first frame)" end
+			if s[#s] > 0.05 then errors[#errors + 1] = k .. " should end at 0 (hidden on the last frame)" end
+			if not bursts and s[4] < 0.99 then errors[#errors + 1] = k .. " should be 1 in the middle of the clip" end
+		end
+		if not has_vis and k:match("%.Blend$") and type(s[1]) == "number" then
 			if s[1] > 0.1 and not reveals_text then errors[#errors + 1] = k .. " should start near 0 (hidden)" end
 			if s[4] < 0.99 then errors[#errors + 1] = k .. " should be 1 in the middle of the clip" end
 			if s[#s] > 0.1 then errors[#errors + 1] = k .. " should end near 0 (hidden)" end

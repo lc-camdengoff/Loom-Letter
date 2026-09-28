@@ -319,8 +319,11 @@ test("every title preset matches its template", function()
 		for _, t in ipairs(p.textTargets or {}) do need(t[1], t[2]) end
 		for _, t in ipairs(p.text2Targets or {}) do need(t[1], t[2]) end
 		for _, name in ipairs(p.fontTools or {}) do need(name, "Font"); need(name, "Style") end
-		for _, name in ipairs(p.colorTools or {}) do need(name, "Red1") end
-		for _, name in ipairs(p.accentTools or {}) do need(name, "TopLeftRed") end
+		for _, list in ipairs({ p.colorTargets or {}, p.accentTargets or {} }) do
+			for _, t in ipairs(list) do need(t[1], t[2] == "bg" and "TopLeftRed" or "Red1") end
+		end
+		for _, t in ipairs(p.fpsTargets or {}) do need(t[1], t[2]) end
+		truthy(p.category and LL.CATEGORY_NAMES[p.category], p.name .. " has a known category")
 		if p.inFrames then need(p.host, "InFrames"); eq(tools[p.host].Inputs.InFrames.Value, p.inFrames, p.template .. " intro default") end
 		if p.outFrames then need(p.host, "OutFrames"); eq(tools[p.host].Inputs.OutFrames.Value, p.outFrames, p.template .. " outro default") end
 	end
@@ -344,6 +347,23 @@ test("titleChanges only overrides what the user filled in", function()
 	for _, c in ipairs(changes) do got[c[1] .. "." .. c[2]] = c[3] end
 	eq(got["Title.Message"], "hello", "typewriter text goes to Message")
 	eq(got["Title.InFrames"], nil, "typewriter has no intro timing")
+end)
+
+test("titleChanges converts numbers and passes the frame rate", function()
+	local cd = LL.findPreset(LL.TITLES, "Countdown")
+	local got = {}
+	for _, c in ipairs(LL.titleChanges(cd, { text = " 1,200 ", fps = 29.97, accent = "#00ff00" })) do got[c[1] .. "." .. c[2]] = c[3] end
+	eq(got["Title.StartSeconds"], 1200, "number field")
+	near(got["Title.FPS"], 29.97)
+	near(got["Bar.TopLeftGreen"], 1, "bg accent")
+	got = {}
+	for _, c in ipairs(LL.titleChanges(cd, { text = "soon" })) do got[c[1] .. "." .. c[2]] = c[3] end
+	eq(got["Title.StartSeconds"], nil, "non-numbers are ignored")
+	local sw = LL.findPreset(LL.TITLES, "Split Word")
+	got = {}
+	for _, c in ipairs(LL.titleChanges(sw, { accent = "#0000ff", font = "Inter" })) do got[c[1] .. "." .. c[2]] = c[3] end
+	near(got["Title.Blue1"], 1, "text accent")
+	eq(got["Right.Font"], "Inter", "font goes to both words")
 end)
 
 test("preset names are unique", function()
@@ -429,7 +449,7 @@ end)
 
 test("panel: titles fall back to compound clips when there is no media pool item", function()
 	local env = run_panel({ { mock_item(86400, 1000, 1) } }, { titles_have_mpi = false }, function(win, w)
-		w.List.current = w.List.items[6] -- Lower Third
+		for _, it in ipairs(w.List.items) do if it.Text[0] == "Lower Third" then w.List.current = it end end
 		win.On.List.CurrentItemChanged({})
 		w.TText.Text = "Sam Lee"
 		w.TText2.Text = "Producer"
@@ -490,6 +510,24 @@ test("panel: selection applies to every cut and remove cleans up", function()
 		truthy(status(w):find("from 3 clip(s)", 1, true), status(w))
 	end)
 	for _, c in ipairs(sel) do eq(c.comps[1]:chain(), "MediaIn1 > MediaOut1") end
+end)
+
+test("panel: category filter", function()
+	run_panel({ { mock_item(86400, 1000, 1) } }, {}, function(win, w)
+		eq(w.Category.items[1], "All titles")
+		local idx
+		for i, c in ipairs(w.Category.items) do if c == "Timers & Counters" then idx = i - 1 end end
+		truthy(idx, "counters category listed")
+		w.Category.CurrentIndex = idx
+		win.On.Category.CurrentIndexChanged({})
+		eq(#w.List.items, 4, "four counters")
+		w.List.current = w.List.items[1]
+		win.On.List.CurrentItemChanged({})
+		eq(w.TTextLabel.Text, "End value", "field label follows the preset")
+		win.On.ModeCuts.Clicked({})
+		eq(w.Category.items[1], "All transitions")
+		eq(#w.List.items, #LL.CUTS, "filter reset when switching mode")
+	end)
 end)
 
 test("panel: problems are reported in the status line", function()

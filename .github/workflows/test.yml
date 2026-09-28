@@ -24,7 +24,7 @@ jobs:
           export LOOMLETTER_FUSION_DIR="$RUNNER_TEMP/fusion"
           ./install.sh
           test -f "$LOOMLETTER_FUSION_DIR/Scripts/Utility/Loom Letter.lua"
-          test "$(ls "$LOOMLETTER_FUSION_DIR/Templates/Edit/Titles/Loom Letter" | wc -l)" -eq 6
+          test "$(ls "$LOOMLETTER_FUSION_DIR/Templates/Edit/Titles/Loom Letter" | wc -l)" -eq 26
           ./install.sh --uninstall
           test ! -e "$LOOMLETTER_FUSION_DIR/Scripts/Utility/Loom Letter.lua"
 
@@ -40,6 +40,6 @@ jobs:
           $script = Join-Path $env:LOOMLETTER_FUSION_DIR 'Scripts\Utility\Loom Letter.lua'
           if (-not (Test-Path $script)) { throw 'panel script was not installed' }
           $n = (Get-ChildItem (Join-Path $env:LOOMLETTER_FUSION_DIR 'Templates\Edit\Titles\Loom Letter') -Filter *.setting).Count
-          if ($n -ne 6) { throw "expected 6 templates, got $n" }
+          if ($n -ne 26) { throw "expected 26 templates, got $n" }
           ./install.ps1 -Uninstall
           if (Test-Path $script) { throw 'uninstall left the panel script behind' }

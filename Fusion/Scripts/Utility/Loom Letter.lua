@@ -191,47 +191,127 @@ end
 -- ---------------------------------------------------------------------------------------
 
 --[[ Title presets map onto the .setting templates in Templates/Edit/Titles/Loom Letter.
-     textTargets etc. name the tools inside each template that receive the panel's values.
+     Target lists name the tools inside each template that receive the panel's fields:
+       textTargets / text2Targets  { tool, input [, "number"] }   ("number" converts the text)
+       colorTargets / accentTargets { tool, "text" | "bg" }       (Text+ fill or Background colour)
+       fontTools { tool, ... }        fpsTargets { { tool, input } }  (set from the timeline)
      Adding a preset: build the template (tools/build_templates.py), then add an entry. ]]
+local function T(p)
+	p.host = p.host or "Title"
+	p.template = p.template or ("LL " .. p.name)
+	p.preview = p.preview or ("title-" .. (p.name:lower():gsub("[^%w]+", "-")) .. ".png")
+	p.textTargets = p.textTargets or { { p.host, "StyledText" } }
+	p.fontTools = p.fontTools or { p.host }
+	p.colorTargets = p.colorTargets or { { p.host, "text" } }
+	return p
+end
+
+LL.CATEGORY_ORDER = { "Essential", "Social", "Counters", "Cinematic", "Shapes" }
+LL.CATEGORY_NAMES = {
+	Essential = "Essential Typography", Social = "Social Media", Counters = "Timers & Counters",
+	Cinematic = "Cinematic Titles", Shapes = "Shape Elements",
+}
+
 LL.TITLES = {
-	{
-		name = "Slide Up", template = "LL Slide Up", preview = "title-slide-up.png", tag = "Clean",
-		desc = "Rises into place with a soft fade and keeps rising on the way out.",
-		text = "YOUR TITLE HERE", host = "Title", inFrames = 15, outFrames = 12,
-		textTargets = { { "Title", "StyledText" } }, fontTools = { "Title" }, colorTools = { "Title" },
-	},
-	{
-		name = "Blur In", template = "LL Blur In", preview = "title-blur-in.png", tag = "Soft",
-		desc = "Resolves out of a blur while settling from slightly larger.",
-		text = "YOUR TITLE HERE", host = "Title", inFrames = 18, outFrames = 12,
-		textTargets = { { "Title", "StyledText" } }, fontTools = { "Title" }, colorTools = { "Title" },
-	},
-	{
-		name = "Pop", template = "LL Pop", preview = "title-pop.png", tag = "Bouncy",
-		desc = "Springs in with an overshoot and pops back out. Great for short words.",
-		text = "POP!", host = "Title", inFrames = 12, outFrames = 8,
-		textTargets = { { "Title", "StyledText" } }, fontTools = { "Title" }, colorTools = { "Title" },
-	},
-	{
-		name = "Tracking", template = "LL Tracking", preview = "title-tracking.png", tag = "Cinematic",
-		desc = "Wide letter spacing that slowly tightens as the title fades up.",
-		text = "CINEMATIC", host = "Title", inFrames = 30, outFrames = 15,
-		textTargets = { { "Title", "StyledText" } }, fontTools = { "Title" }, colorTools = { "Title" },
-	},
-	{
-		name = "Typewriter", template = "LL Typewriter", preview = "title-typewriter.png", tag = "Retro",
+	-- Essential Typography
+	T{ name = "Slide Up", category = "Essential", tag = "Clean", text = "YOUR TITLE HERE", inFrames = 15, outFrames = 12,
+		desc = "Rises into place with a soft fade and keeps rising on the way out." },
+	T{ name = "Boxed Title", category = "Essential", tag = "Frame", text = "MOTION GRAPHICS", text2 = "WITHOUT HASSLE",
+		text2Label = "Caption", inFrames = 18, outFrames = 12,
+		desc = "Title inside an accent outline that draws open, with a caption tag underneath.",
+		text2Targets = { { "Caption", "StyledText" } }, accentTargets = { { "Box", "bg" }, { "Tag", "bg" } } },
+	T{ name = "Tag Title", category = "Essential", tag = "Label", text = "MOTION GRAPHICS", text2 = "WITHOUT HASSLE",
+		text2Label = "Tag", inFrames = 15, outFrames = 12,
+		desc = "A small accent tag drops in above the title as it rises.",
+		text2Targets = { { "Caption", "StyledText" } }, accentTargets = { { "Tag", "bg" } } },
+	T{ name = "Split Word", category = "Essential", tag = "Two words", text = "MISTER", text2 = "HORSE",
+		textLabel = "Left word", text2Label = "Right word", inFrames = 18, outFrames = 12,
+		desc = "Two words slide out from a divider; the left one in the accent colour.",
+		text2Targets = { { "Right", "StyledText" } }, fontTools = { "Title", "Right" },
+		colorTargets = { { "Right", "text" } }, accentTargets = { { "Title", "text" } } },
+	T{ name = "Underline", category = "Essential", tag = "Line", text = "POWERFUL WORKFLOW", inFrames = 18, outFrames = 12,
+		desc = "An accent underline wipes out while the title rises onto it.",
+		accentTargets = { { "Line", "bg" } } },
+	T{ name = "Pop", category = "Essential", tag = "Bouncy", text = "POP!", inFrames = 12, outFrames = 8,
+		desc = "Springs in with an overshoot and pops back out. Great for short words." },
+	T{ name = "Typewriter", category = "Essential", tag = "Retro", text = "Type your message here", outFrames = 10,
 		desc = "Types the message out one character at a time with a blinking cursor.",
-		text = "Type your message here", host = "Title", outFrames = 10,
-		textTargets = { { "Title", "Message" } }, fontTools = { "Title" }, colorTools = { "Title" },
-	},
-	{
-		name = "Lower Third", template = "LL Lower Third", preview = "title-lower-third.png", tag = "Name + role",
-		desc = "Name and role slide out from behind an accent bar. Line 2 is the role.",
-		text = "JANE DOE", text2 = "Title / Role", accent = "#F5B300", host = "NameText",
-		inFrames = 18, outFrames = 12,
-		textTargets = { { "NameText", "StyledText" } }, text2Targets = { { "RoleText", "StyledText" } },
-		fontTools = { "NameText" }, colorTools = { "NameText" }, accentTools = { "Accent" },
-	},
+		textTargets = { { "Title", "Message" } } },
+	T{ name = "Lower Third", category = "Essential", tag = "Name + role", text = "JANE DOE", text2 = "Title / Role",
+		text2Label = "Role", host = "NameText", inFrames = 18, outFrames = 12,
+		desc = "Name and role slide out from behind an accent bar.",
+		text2Targets = { { "RoleText", "StyledText" } }, accentTargets = { { "Accent", "bg" } } },
+
+	-- Social Media
+	T{ name = "Subscribe", category = "Social", tag = "Button", text = "SUBSCRIBE", text2 = "SUBSCRIBED",
+		text2Label = "Clicked", inFrames = 12, outFrames = 10, seconds = 3,
+		desc = "Red button pops in, gets clicked a second later and turns to Subscribed.",
+		textTargets = { { "Title", "ButtonText" } }, text2Targets = { { "Title", "ClickedText" } },
+		accentTargets = { { "Button", "bg" } } },
+	T{ name = "Follow", category = "Social", tag = "Button", text = "+  FOLLOW", text2 = "FOLLOWING",
+		text2Label = "Clicked", inFrames = 12, outFrames = 10, seconds = 3,
+		desc = "Blue follow button with a click and a Following state.",
+		textTargets = { { "Title", "ButtonText" } }, text2Targets = { { "Title", "ClickedText" } },
+		accentTargets = { { "Button", "bg" } } },
+	T{ name = "Handle", category = "Social", tag = "@name", text = "@yourname", textLabel = "Handle",
+		inFrames = 16, outFrames = 12,
+		desc = "A white pill wipes open with an accent icon dot and your handle.",
+		accentTargets = { { "Dot", "bg" } } },
+	T{ name = "Chat Bubble", category = "Social", tag = "Message", text = "What's up?", textLabel = "Message",
+		inFrames = 12, outFrames = 10, seconds = 3,
+		desc = "A chat bubble pops out of its tail corner." },
+
+	-- Timers & Counters
+	T{ name = "Counter", category = "Counters", tag = "Number", text = "38458", text2 = "$",
+		textLabel = "End value", text2Label = "Prefix", inFrames = 10, outFrames = 10,
+		desc = "Counts up to a number with thousands separators, prefix and suffix.",
+		textTargets = { { "Title", "EndValue", "number" } }, text2Targets = { { "Title", "Prefix" } } },
+	T{ name = "Countdown", category = "Counters", tag = "Timer", text = "5", textLabel = "Seconds",
+		inFrames = 10, outFrames = 10,
+		desc = "MM:SS countdown in a box with a shrinking progress line. Set Seconds to the clip length.",
+		textTargets = { { "Title", "StartSeconds", "number" } }, fpsTargets = { { "Title", "FPS" } },
+		accentTargets = { { "Bar", "bg" } } },
+	T{ name = "Progress Bar", category = "Counters", tag = "Bar", text = "80", text2 = "1980 VOTES",
+		textLabel = "Percent", text2Label = "Label", inFrames = 12, outFrames = 12,
+		desc = "A bar fills to a percentage while the number counts up.",
+		textTargets = { { "Title", "Percent", "number" } }, text2Targets = { { "Title", "StyledText" } },
+		accentTargets = { { "Fill", "bg" } } },
+	T{ name = "Bar Stat", category = "Counters", tag = "Stat", text = "80", text2 = "YOUR TITLE",
+		textLabel = "Percent", text2Label = "Label", inFrames = 12, outFrames = 12,
+		desc = "A vertical bar grows next to a big counting percentage.",
+		textTargets = { { "Title", "Percent", "number" } }, text2Targets = { { "Title", "StyledText" } },
+		accentTargets = { { "Bar", "bg" } } },
+
+	-- Cinematic
+	T{ name = "Blur In", category = "Cinematic", tag = "Soft", text = "YOUR TITLE HERE", inFrames = 18, outFrames = 12,
+		desc = "Resolves out of a blur while settling from slightly larger." },
+	T{ name = "Tracking", category = "Cinematic", tag = "Wide", text = "CINEMATIC", inFrames = 30, outFrames = 15,
+		desc = "Wide letter spacing that slowly tightens as the title fades up." },
+	T{ name = "Glow", category = "Cinematic", tag = "Glow", text = "HORSE OF STEEL", inFrames = 24, outFrames = 18,
+		desc = "Fades up through a bright bloom that settles into a soft glow." },
+	T{ name = "Credits", category = "Cinematic", tag = "Credit", text = "Mister Horse", text2 = "Created by",
+		textLabel = "Name", text2Label = "Credit line", inFrames = 30, outFrames = 24,
+		desc = "Opening-credit style: a small credit line over a slowly drifting name.",
+		text2Targets = { { "Credit", "StyledText" } } },
+	T{ name = "Flicker", category = "Cinematic", tag = "Neon", text = "PARADOX", inFrames = 20, outFrames = 14,
+		desc = "Flickers on and off like a failing light before holding steady." },
+	T{ name = "Converge", category = "Cinematic", tag = "Echo", text = "GRAND TITLES", inFrames = 24, outFrames = 16,
+		desc = "Echoes slide in from above and below and lock together on an accent line.",
+		accentTargets = { { "Line", "bg" } } },
+
+	-- Shape Elements (no text)
+	T{ name = "Ring Burst", category = "Shapes", tag = "Burst", host = "Canvas", seconds = 1,
+		desc = "A ring bursts outward and thins away. Stack a few with different delays.",
+		textTargets = {}, fontTools = {}, colorTargets = { { "Ring", "bg" } } },
+	T{ name = "Sparkle", category = "Shapes", tag = "Twinkle", host = "Canvas", seconds = 1,
+		desc = "A four-point sparkle swells, turns and fades.",
+		textTargets = {}, fontTools = {}, colorTargets = { { "HRay", "bg" } } },
+	T{ name = "Speed Lines", category = "Shapes", tag = "Motion", host = "Canvas", seconds = 1,
+		desc = "Staggered dashes streak across the frame.",
+		textTargets = {}, fontTools = {}, colorTargets = { { "Line2", "bg" } }, accentTargets = { { "Line1", "bg" } } },
+	T{ name = "Circle Pop", category = "Shapes", tag = "Pop", host = "Canvas", seconds = 1,
+		desc = "A dot pops with an overshoot while a ring ripples out.",
+		textTargets = {}, fontTools = {}, colorTargets = { { "Ring", "bg" } }, accentTargets = { { "Dot", "bg" } } },
 }
 
 LL.DIRECTIONS = { "Left", "Right", "Up", "Down" }
@@ -251,7 +331,7 @@ end
      o.intensity scales the effect (1 = default), o.direction is one of LL.DIRECTIONS. ]]
 LL.CUTS = {
 	{
-		id = "zoom_in", short = "ZoomIn", name = "Zoom In", preview = "cut-zoom-in.png", tag = "Zoom",
+		id = "zoom_in", short = "ZoomIn", name = "Zoom In", preview = "cut-zoom-in.png", tag = "Zoom", category = "Zoom",
 		desc = "Punches through the cut with one continuous zoom and motion blur.",
 		ease = "accel",
 		build = function(side, E, o)
@@ -261,7 +341,7 @@ LL.CUTS = {
 		end,
 	},
 	{
-		id = "zoom_out", short = "ZoomOut", name = "Zoom Out", preview = "cut-zoom-out.png", tag = "Zoom",
+		id = "zoom_out", short = "ZoomOut", name = "Zoom Out", preview = "cut-zoom-out.png", tag = "Zoom", category = "Zoom",
 		desc = "Pulls back through the cut; edges are mirrored so the frame stays full.",
 		ease = "accel",
 		build = function(side, E, o)
@@ -271,7 +351,7 @@ LL.CUTS = {
 		end,
 	},
 	{
-		id = "whip", short = "Whip", name = "Whip Pan", preview = "cut-whip.png", tag = "Motion",
+		id = "whip", short = "Whip", name = "Whip Pan", preview = "cut-whip.png", tag = "Motion", category = "Motion",
 		desc = "Fast pan with heavy motion blur. Direction sets which way the frame travels.",
 		ease = "accel", usesDirection = true,
 		build = function(side, E, o)
@@ -282,7 +362,7 @@ LL.CUTS = {
 		end,
 	},
 	{
-		id = "spin", short = "Spin", name = "Spin", preview = "cut-spin.png", tag = "Motion",
+		id = "spin", short = "Spin", name = "Spin", preview = "cut-spin.png", tag = "Motion", category = "Motion",
 		desc = "Rotates through the cut. Left/Up spin counter-clockwise, Right/Down clockwise.",
 		ease = "accel", usesDirection = true,
 		build = function(side, E, o)
@@ -295,7 +375,7 @@ LL.CUTS = {
 		end,
 	},
 	{
-		id = "flash", short = "Flash", name = "Flash", preview = "cut-flash.png", tag = "Light",
+		id = "flash", short = "Flash", name = "Flash", preview = "cut-flash.png", tag = "Light", category = "Light & Blur",
 		desc = "Blows out to a bright flash on the cut, with a touch of blur.",
 		ease = "smooth",
 		build = function(side, E, o)
@@ -310,7 +390,7 @@ LL.CUTS = {
 		end,
 	},
 	{
-		id = "blur", short = "Blur", name = "Blur", preview = "cut-blur.png", tag = "Soft",
+		id = "blur", short = "Blur", name = "Blur", preview = "cut-blur.png", tag = "Soft", category = "Light & Blur",
 		desc = "Defocuses into the cut and pulls focus on the other side.",
 		ease = "smooth",
 		build = function(side, E, o)
@@ -593,30 +673,36 @@ LL._sources = {}
 function LL.titleChanges(preset, opts)
 	local changes = {}
 	local function add(tool, id, v) changes[#changes + 1] = { tool, id, v } end
-	local text = LL.trim(opts.text)
-	if text ~= "" then
-		for _, t in ipairs(preset.textTargets or {}) do add(t[1], t[2], opts.text) end
+	local function texts(targets, raw)
+		if LL.trim(raw) == "" then return end
+		for _, t in ipairs(targets or {}) do
+			if t[3] == "number" then
+				local n = tonumber((LL.trim(raw):gsub(",", "")))
+				if n then add(t[1], t[2], n) end
+			else
+				add(t[1], t[2], raw)
+			end
+		end
 	end
-	local text2 = LL.trim(opts.text2)
-	if text2 ~= "" then
-		for _, t in ipairs(preset.text2Targets or {}) do add(t[1], t[2], opts.text2) end
+	local function colors(targets, hex)
+		local rgb = LL.parseHex(hex)
+		if not rgb then return end
+		for _, t in ipairs(targets or {}) do
+			local keys = t[2] == "bg" and { "TopLeftRed", "TopLeftGreen", "TopLeftBlue" } or { "Red1", "Green1", "Blue1" }
+			for i = 1, 3 do add(t[1], keys[i], rgb[i]) end
+		end
 	end
+	texts(preset.textTargets, opts.text)
+	texts(preset.text2Targets, opts.text2)
 	local font, style = LL.trim(opts.font), LL.trim(opts.style)
 	for _, name in ipairs(preset.fontTools or {}) do
 		if font ~= "" then add(name, "Font", font) end
 		if style ~= "" then add(name, "Style", style) end
 	end
-	local rgb = LL.parseHex(opts.color)
-	if rgb then
-		for _, name in ipairs(preset.colorTools or {}) do
-			add(name, "Red1", rgb[1]); add(name, "Green1", rgb[2]); add(name, "Blue1", rgb[3])
-		end
-	end
-	local accent = LL.parseHex(opts.accent)
-	if accent then
-		for _, name in ipairs(preset.accentTools or {}) do
-			add(name, "TopLeftRed", accent[1]); add(name, "TopLeftGreen", accent[2]); add(name, "TopLeftBlue", accent[3])
-		end
+	colors(preset.colorTargets, opts.color)
+	colors(preset.accentTargets, opts.accent)
+	if opts.fps then
+		for _, t in ipairs(preset.fpsTargets or {}) do add(t[1], t[2], opts.fps) end
 	end
 	if preset.inFrames and opts.inFrames then add(preset.host, "InFrames", opts.inFrames) end
 	if preset.outFrames and opts.outFrames then add(preset.host, "OutFrames", opts.outFrames) end
@@ -700,6 +786,7 @@ function LL.addTitle(preset, opts)
 	local ctx = LL.context()
 	local playhead, fps = LL.playheadFrame(ctx)
 	local frames = math.max(1, math.floor((tonumber(opts.seconds) or 5) * fps + 0.5))
+	opts.fps = fps
 	local src = LL.titleSource(ctx, preset)
 	local mpi, compound, scratch, length = src.mpi, nil, nil, src.length
 	if not mpi then
@@ -1103,7 +1190,9 @@ function LL.runUI()
 	local LABEL_W = 92
 
 	local function row(label, ...)
-		return ui:HGroup{ Weight = 0, ui:Label{ Text = label, Weight = 0, MinimumSize = { LABEL_W, 0 } }, ... }
+		local text, id = label, nil
+		if type(label) == "table" then text, id = label[1], label[2] end
+		return ui:HGroup{ Weight = 0, ui:Label{ ID = id, Text = text, Weight = 0, MinimumSize = { LABEL_W, 0 } }, ... }
 	end
 
 	local win = disp:AddWindow({
@@ -1118,7 +1207,8 @@ function LL.runUI()
 			ui:Button{ ID = "ModeTitles", Text = "Titles", Checkable = true, Checked = true, MinimumSize = { 110, 28 } },
 			ui:Button{ ID = "ModeCuts", Text = "Transitions", Checkable = true, MinimumSize = { 110, 28 } },
 			ui:HGap(0, 1),
-			ui:LineEdit{ ID = "Search", PlaceholderText = "Search presets", MinimumSize = { 240, 0 } },
+			ui:ComboBox{ ID = "Category", MinimumSize = { 170, 0 } },
+			ui:LineEdit{ ID = "Search", PlaceholderText = "Search presets", MinimumSize = { 220, 0 } },
 		},
 		ui:HGroup{
 			Weight = 1,
@@ -1132,8 +1222,8 @@ function LL.runUI()
 					ID = "Pages", Weight = 1,
 					ui:VGroup{
 						ID = "TitlePage", Spacing = 4,
-						row("Text", ui:LineEdit{ ID = "TText" }),
-						row("Line 2", ui:LineEdit{ ID = "TText2" }),
+						row({ "Text", "TTextLabel" }, ui:LineEdit{ ID = "TText" }),
+						row({ "Line 2", "TText2Label" }, ui:LineEdit{ ID = "TText2" }),
 						row("Font", ui:ComboBox{ ID = "TFont", Editable = true }),
 						row("Style", ui:LineEdit{ ID = "TStyle", PlaceholderText = "(preset style)" }),
 						row("Color", ui:LineEdit{ ID = "TColor", PlaceholderText = "#FFFFFF" },
@@ -1171,7 +1261,8 @@ function LL.runUI()
 	end
 
 	local itm = win:GetItems()
-	local state = { mode = prefs.mode == "cuts" and "cuts" or "titles", visible = {}, current = nil, busy = false, diagRuns = 0 }
+	local state = { mode = prefs.mode == "cuts" and "cuts" or "titles", visible = {}, current = nil, busy = false,
+		diagRuns = 0, categories = {} }
 
 	local function setStatus(msg)
 		itm.Status.Text = msg
@@ -1247,13 +1338,22 @@ function LL.runUI()
 			end)
 		end
 		if state.mode == "titles" then
-			itm.TText.PlaceholderText = p.text or ""
+			local hasText = #(p.textTargets or {}) > 0
+			itm.TTextLabel.Text = p.textLabel or "Text"
+			itm.TText2Label.Text = p.text2Label or "Line 2"
+			itm.TText.PlaceholderText = hasText and (p.text or "") or "(no text in this preset)"
 			itm.TText2.PlaceholderText = p.text2 or "(not used by this preset)"
+			itm.TText.Enabled = hasText
 			itm.TText2.Enabled = p.text2Targets ~= nil
-			itm.TAccent.Enabled = p.accentTools ~= nil
+			itm.TFont.Enabled = #(p.fontTools or {}) > 0
+			itm.TStyle.Enabled = #(p.fontTools or {}) > 0
+			itm.TColor.Enabled = #(p.colorTargets or {}) > 0
+			itm.TAccent.Enabled = p.accentTargets ~= nil
 			itm.TIn.Enabled = p.inFrames ~= nil
+			itm.TOut.Enabled = p.outFrames ~= nil
 			itm.TIn.Value = p.inFrames or 0
 			itm.TOut.Value = p.outFrames or 0
+			itm.TSeconds.Text = tostring(p.seconds or 5)
 		else
 			itm.CDirection.Enabled = p.usesDirection == true
 		end
@@ -1261,14 +1361,15 @@ function LL.runUI()
 
 	local function refill()
 		local q = LL.trim(itm.Search.Text):lower()
+		local cat = state.categories[(itm.Category.CurrentIndex or 0) + 1]
 		itm.List:Clear()
 		state.visible = {}
 		for _, p in ipairs(presets()) do
-			local hay = (p.name .. " " .. (p.tag or "") .. " " .. (p.desc or "")):lower()
-			if q == "" or hay:find(q, 1, true) then
+			local hay = (p.name .. " " .. (p.tag or "") .. " " .. (p.category or "") .. " " .. (p.desc or "")):lower()
+			if (q == "" or hay:find(q, 1, true)) and (not cat or p.category == cat) then
 				local it = itm.List:NewItem()
 				it.Text[0] = p.name
-				it.Text[1] = p.tag or ""
+				it.Text[1] = (p.category and (p.category .. "  ·  ") or "") .. (p.tag or "")
 				itm.List:AddTopLevelItem(it)
 				state.visible[#state.visible + 1] = p
 			end
@@ -1281,6 +1382,24 @@ function LL.runUI()
 		itm.ModeTitles.Checked = mode == "titles"
 		itm.ModeCuts.Checked = mode == "cuts"
 		itm.Pages.CurrentIndex = mode == "titles" and 0 or 1
+		-- category filter: index 0 is "All", then categories in LL.CATEGORY_ORDER / list order
+		state.categories = { false }
+		local seen = {}
+		local ordered = {}
+		if mode == "titles" then
+			for _, c in ipairs(LL.CATEGORY_ORDER) do ordered[#ordered + 1] = c end
+		end
+		for _, p in ipairs(presets()) do ordered[#ordered + 1] = p.category end
+		itm.Category:Clear()
+		itm.Category:AddItem(mode == "titles" and "All titles" or "All transitions")
+		for _, c in ipairs(ordered) do
+			if c and not seen[c] then
+				seen[c] = true
+				state.categories[#state.categories + 1] = c
+				itm.Category:AddItem(LL.CATEGORY_NAMES[c] or c)
+			end
+		end
+		itm.Category.CurrentIndex = 0
 		refill()
 	end
 
@@ -1340,6 +1459,7 @@ function LL.runUI()
 	win.On.ModeTitles.Clicked = guarded("Switch", function() setMode("titles") end)
 	win.On.ModeCuts.Clicked = guarded("Switch", function() setMode("cuts") end)
 	win.On.Search.TextChanged = guarded("Search", function() refill() end)
+	win.On.Category.CurrentIndexChanged = guarded("Filter", function() refill() end)
 
 	win.On.List.CurrentItemChanged = guarded("Select", function(ev)
 		local it = itm.List:CurrentItem()

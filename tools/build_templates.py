@@ -568,6 +568,11 @@ PRESETS = {
 
 
 def main():
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    sys.modules.setdefault("build_templates", sys.modules[__name__])  # share classes with the library
+    from library_presets import LIBRARY  # noqa: E402 - imports helpers from this module
+    PRESETS.update(LIBRARY)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for name, build in PRESETS.items():
         text = emit(build(), 0) + "\n"
