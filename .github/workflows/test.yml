@@ -1,0 +1,45 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lua:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LuaJIT
+        run: sudo apt-get update && sudo apt-get install -y luajit
+      - name: Generated templates are up to date
+        run: |
+          python3 tools/build_templates.py
+          git diff --exit-code -- Fusion/Templates
+      - name: Validate templates
+        run: luajit tools/validate_settings.lua "Fusion/Templates/Edit/Titles/Loom Letter/"*.setting
+      - name: Tests
+        run: luajit tests/run_tests.lua
+      - name: Installer (Linux)
+        run: |
+          export LOOMLETTER_FUSION_DIR="$RUNNER_TEMP/fusion"
+          ./install.sh
+          test -f "$LOOMLETTER_FUSION_DIR/Scripts/Utility/Loom Letter.lua"
+          test "$(ls "$LOOMLETTER_FUSION_DIR/Templates/Edit/Titles/Loom Letter" | wc -l)" -eq 6
+          ./install.sh --uninstall
+          test ! -e "$LOOMLETTER_FUSION_DIR/Scripts/Utility/Loom Letter.lua"
+
+  windows-installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer (Windows)
+        shell: pwsh
+        run: |
+          $env:LOOMLETTER_FUSION_DIR = Join-Path $env:RUNNER_TEMP 'fusion'
+          ./install.ps1
+          $script = Join-Path $env:LOOMLETTER_FUSION_DIR 'Scripts\Utility\Loom Letter.lua'
+          if (-not (Test-Path $script)) { throw 'panel script was not installed' }
+          $n = (Get-ChildItem (Join-Path $env:LOOMLETTER_FUSION_DIR 'Templates\Edit\Titles\Loom Letter') -Filter *.setting).Count
+          if ($n -ne 6) { throw "expected 6 templates, got $n" }
+          ./install.ps1 -Uninstall
+          if (Test-Path $script) { throw 'uninstall left the panel script behind' }
