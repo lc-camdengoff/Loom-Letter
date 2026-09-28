@@ -18,7 +18,7 @@ something misbehaves, run "Diagnostics" in the window and send that report along
 ]]
 
 local LL = {}
-LL.VERSION = "0.2.2"
+LL.VERSION = "0.2.3"
 LL.BIN_NAME = "Loom Letter"
 LL.SCRATCH_TIMELINE = "Loom Letter Scratch"
 LL.TOOL_TAG = "LoomLetter"          -- tool:SetData key that marks nodes Loom Letter owns
@@ -45,12 +45,15 @@ function LL.isUserError(e)
 	return getmetatable(e) == UserError
 end
 
---- Resolve returns lists as tables keyed 1..n (sometimes sparse); normalise to an array.
+--- Resolve returns lists as tables keyed 1..n (sometimes sparse, sometimes with an extra
+--- count field such as n = 3); normalise to an array of the objects/strings only.
 function LL.list(t)
 	local out = {}
 	if type(t) ~= "table" then return out end
 	local keys = {}
-	for k in pairs(t) do keys[#keys + 1] = k end
+	for k, v in pairs(t) do
+		if k ~= "n" and type(v) ~= "number" and type(v) ~= "boolean" then keys[#keys + 1] = k end
+	end
 	table.sort(keys, function(a, b)
 		if type(a) == type(b) and (type(a) == "number" or type(a) == "string") then return a < b end
 		return type(a) == "number"

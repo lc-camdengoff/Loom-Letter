@@ -66,6 +66,15 @@ end
 -- Pure helpers
 -- ---------------------------------------------------------------------------------------
 
+test("list ignores count fields Resolve adds to lists", function()
+	local a, b = { name = "a" }, { name = "b" }
+	local l = LL.list({ [2] = b, [1] = a, n = 2 })
+	eq(#l, 2); eq(l[1], a); eq(l[2], b)
+	l = LL.list({ a, b, 7 })
+	eq(#l, 2, "stray numbers dropped")
+	eq(#LL.list(nil), 0)
+end)
+
 test("num formats expression constants", function()
 	eq(LL.num(1), "1")
 	eq(LL.num(0.5), "0.5")

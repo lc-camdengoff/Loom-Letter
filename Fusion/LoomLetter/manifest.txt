@@ -1,5 +1,5 @@
-version 0.2.2
-7c6dc87e18c90e617087182dd835227d007dd8b1  Scripts/Utility/Loom Letter.lua
+version 0.2.3
+f42275883bb184e9783cb42c4de1506097cc5e26  Scripts/Utility/Loom Letter.lua
 c7ce53783bf3b7ab09fef8e97182f775edda0297  Templates/Edit/Titles/Loom Letter/LL Bar Stat.setting
 7c7894078501ae70fad9086f786ca86f89935b6d  Templates/Edit/Titles/Loom Letter/LL Blur In.setting
 09414b207f552e43727e08c157ca2e2c3b44e7c2  Templates/Edit/Titles/Loom Letter/LL Boxed Title.setting
