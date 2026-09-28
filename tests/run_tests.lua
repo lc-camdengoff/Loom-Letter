@@ -459,6 +459,28 @@ test("applyUpdate installs changed files, removes stale ones, rewrites the manif
 	os.execute("rm -rf '" .. rootDir .. "'")
 end)
 
+test("sha1 matches the manifest for every shipped file", function()
+	eq(LL.sha1(""), "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+	eq(LL.sha1("abc"), "a9993e364706816aba3e25717850c26c9cd0d89d")
+	eq(LL.sha1(string.rep("a", 1000)), "291e9a6c66994949b57ba5e650361e98fc36b1ba")
+	local m = LL.parseManifest(read(root .. "/Fusion/LoomLetter/manifest.txt"))
+	local n = 0
+	for path, hash in pairs(m.files) do
+		eq(LL.fileSha1(root .. "/Fusion/" .. path), hash, path)
+		n = n + 1
+	end
+	truthy(n > 50)
+end)
+
+test("planUpdate trusts files on disk over a stale manifest", function()
+	local remote = LL.parseManifest("version 2\nabc1  Scripts/Utility/Loom Letter.lua\nabc2  LoomLetter/previews/a.png")
+	-- manifest claims everything is current, but the script on disk is old and a.png is missing
+	local localM = LL.parseManifest("version 2\nabc1  Scripts/Utility/Loom Letter.lua\nabc2  LoomLetter/previews/a.png")
+	local disk = { ["Scripts/Utility/Loom Letter.lua"] = "abc0", ["LoomLetter/previews/a.png"] = false }
+	local get = LL.planUpdate(localM, remote, function(p) return disk[p] end)
+	eq(#get, 2, "stale and missing files re-downloaded")
+end)
+
 test("preset names are unique", function()
 	for _, list in ipairs({ LL.TITLES, LL.CUTS }) do
 		local seen = {}

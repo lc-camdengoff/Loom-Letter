@@ -18,7 +18,7 @@ something misbehaves, run "Diagnostics" in the window and send that report along
 ]]
 
 local LL = {}
-LL.VERSION = "0.2.3"
+LL.VERSION = "0.2.4"
 LL.BIN_NAME = "Loom Letter"
 LL.SCRATCH_TIMELINE = "Loom Letter Scratch"
 LL.TOOL_TAG = "LoomLetter"          -- tool:SetData key that marks nodes Loom Letter owns
@@ -1014,11 +1014,14 @@ function LL.safeUpdatePath(path)
 end
 
 --- Files to download (new or changed) and to delete (gone from the remote manifest).
-function LL.planUpdate(localM, remoteM)
+function LL.planUpdate(localM, remoteM, diskHash)
 	local get, remove = {}, {}
 	local have = localM and localM.files or {}
 	for path, hash in pairs(remoteM.files) do
-		if LL.safeUpdatePath(path) and have[path] ~= hash then get[#get + 1] = path end
+		-- trust the file on disk over the recorded manifest when we can read it
+		local actual = diskHash and diskHash(path)
+		if actual == nil then actual = have[path] end
+		if LL.safeUpdatePath(path) and actual ~= hash then get[#get + 1] = path end
 	end
 	for path in pairs(have) do
 		if remoteM.files[path] == nil and LL.safeUpdatePath(path) then remove[#remove + 1] = path end
@@ -1053,6 +1056,45 @@ function LL.readFile(path)
 	return s
 end
 
+--- SHA-1 of a string (hex), pure LuaJIT - used to fingerprint installed and downloaded files.
+function LL.sha1(msg)
+	local bit = require("bit")
+	local band, bor, bxor, bnot, rol, tobit = bit.band, bit.bor, bit.bxor, bit.bnot, bit.rol, bit.tobit
+	local function u32(x) return x % 4294967296 end
+	local h0, h1, h2, h3, h4 = 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0
+	local len = #msg
+	local bits = len * 8
+	msg = msg .. "\128" .. string.rep("\0", (55 - len) % 64)
+	local hi, lo = math.floor(bits / 4294967296), bits % 4294967296
+	msg = msg .. string.char(math.floor(hi / 16777216) % 256, math.floor(hi / 65536) % 256, math.floor(hi / 256) % 256, hi % 256,
+		math.floor(lo / 16777216) % 256, math.floor(lo / 65536) % 256, math.floor(lo / 256) % 256, lo % 256)
+	local w = {}
+	for chunk = 1, #msg, 64 do
+		for i = 0, 15 do
+			local a, b, c, d = msg:byte(chunk + i * 4, chunk + i * 4 + 3)
+			w[i] = tobit(a * 16777216 + b * 65536 + c * 256 + d)
+		end
+		for i = 16, 79 do w[i] = rol(bxor(w[i - 3], w[i - 8], w[i - 14], w[i - 16]), 1) end
+		local a, b, c, d, e = tobit(h0), tobit(h1), tobit(h2), tobit(h3), tobit(h4)
+		for i = 0, 79 do
+			local f, k
+			if i < 20 then f, k = bor(band(b, c), band(bnot(b), d)), 0x5A827999
+			elseif i < 40 then f, k = bxor(b, c, d), 0x6ED9EBA1
+			elseif i < 60 then f, k = bor(band(b, c), band(b, d), band(c, d)), 0x8F1BBCDC
+			else f, k = bxor(b, c, d), 0xCA62C1D6 end
+			local t = tobit(rol(a, 5) + f + e + tobit(k) + w[i])
+			e, d, c, b, a = d, c, rol(b, 30), a, t
+		end
+		h0, h1, h2, h3, h4 = u32(h0 + a), u32(h1 + b), u32(h2 + c), u32(h3 + d), u32(h4 + e)
+	end
+	return ("%08x%08x%08x%08x%08x"):format(h0, h1, h2, h3, h4)
+end
+
+function LL.fileSha1(path)
+	local data = LL.readFile(path)
+	return data and LL.sha1(data) or nil
+end
+
 function LL.localManifest()
 	return LL.parseManifest(LL.readFile(LL.join(LL.paths.data or "?", "manifest.txt")))
 end
@@ -1070,7 +1112,11 @@ function LL.checkForUpdate()
 	local remote = LL.parseManifest(LL.readFile(tmp))
 	os.remove(tmp)
 	if not remote then LL.fail("The update manifest on GitHub couldn't be read.") end
-	local get, remove = LL.planUpdate(LL.localManifest(), remote)
+	local get, remove = LL.planUpdate(LL.localManifest(), remote, function(path)
+		local p = LL.join(LL.paths.root, path)
+		if not LL.fileExists(p) then return false end -- missing: always download
+		return LL.fileSha1(p)
+	end)
 	return { remote = remote, get = get, remove = remove, available = #get + #remove > 0 }
 end
 
@@ -1084,9 +1130,20 @@ function LL.applyUpdate(check)
 	for i, path in ipairs(check.get) do
 		local tmp = LL.join(stage, tostring(i) .. ".part")
 		os.remove(tmp)
-		if not LL.download(LL.UPDATE_BASE .. url_path(path) .. "?t=" .. os.time(), tmp) then
+		local want = check.remote.files[path]
+		local good = false
+		for attempt = 1, 3 do
+			os.remove(tmp)
+			if LL.download(LL.UPDATE_BASE .. url_path(path) .. "?t=" .. os.time() .. attempt, tmp)
+				and LL.fileSha1(tmp) == want then
+				good = true
+				break
+			end
+		end
+		if not good then
 			for _, s in ipairs(staged) do os.remove(s.tmp) end
-			LL.fail(("Update stopped: couldn't download %s. Nothing was changed."):format(path))
+			os.remove(tmp)
+			LL.fail(("Update stopped: %s didn't download correctly (GitHub may still be publishing it - try again in a minute). Nothing was changed."):format(path))
 		end
 		staged[#staged + 1] = { tmp = tmp, path = path }
 	end
