@@ -435,7 +435,12 @@ test("applyUpdate installs changed files, removes stale ones, rewrites the manif
 	LL.paths = { root = rootDir, data = rootDir .. "/LoomLetter" }
 	local fetched = {}
 	LL.download = function(url, dest)
-		local rel = url:sub(#LL.UPDATE_BASE + 1):gsub("%?.*$", ""):gsub("%%(%x%x)", function(h) return string.char(tonumber(h, 16)) end)
+		if url:find("api.github.com", 1, true) then
+			write(dest, string.rep("ab", 20) .. "\n")
+			return true
+		end
+		truthy(url:find("/" .. string.rep("ab", 20) .. "/Fusion/", 1, true), "downloads pinned to the commit: " .. url)
+		local rel = url:match("/Fusion/(.*)$"):gsub("%?.*$", ""):gsub("%%(%x%x)", function(h) return string.char(tonumber(h, 16)) end)
 		fetched[#fetched + 1] = rel
 		local data = read(root .. "/Fusion/" .. rel)
 		if not data then return false end
@@ -479,6 +484,12 @@ test("planUpdate trusts files on disk over a stale manifest", function()
 	local disk = { ["Scripts/Utility/Loom Letter.lua"] = "abc0", ["LoomLetter/previews/a.png"] = false }
 	local get = LL.planUpdate(localM, remote, function(p) return disk[p] end)
 	eq(#get, 2, "stale and missing files re-downloaded")
+end)
+
+test("compareVersions", function()
+	eq(LL.compareVersions("0.2.10", "0.2.9"), 1)
+	eq(LL.compareVersions("0.2.4", "0.2.4"), 0)
+	eq(LL.compareVersions("0.2", "0.2.1"), -1)
 end)
 
 test("preset names are unique", function()

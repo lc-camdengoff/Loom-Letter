@@ -18,13 +18,14 @@ something misbehaves, run "Diagnostics" in the window and send that report along
 ]]
 
 local LL = {}
-LL.VERSION = "0.2.4"
+LL.VERSION = "0.2.5"
 LL.BIN_NAME = "Loom Letter"
 LL.SCRATCH_TIMELINE = "Loom Letter Scratch"
 LL.TOOL_TAG = "LoomLetter"          -- tool:SetData key that marks nodes Loom Letter owns
 LL.PREFS_KEY = "LoomLetter.Prefs"
 LL.CUT_SEARCH_SECONDS = 2           -- how far from the playhead to look for a cut
-LL.UPDATE_BASE = "https://raw.githubusercontent.com/lc-camdengoff/Loom-Letter/main/Fusion/"
+LL.UPDATE_REPO = "lc-camdengoff/Loom-Letter"
+LL.UPDATE_BRANCH = "main"
 LL.UPDATE_INTERVAL = 12 * 3600      -- automatic update checks at most this often (seconds)
 
 local IS_WINDOWS = package and package.config and package.config:sub(1, 1) == "\\"
@@ -1041,8 +1042,9 @@ local function url_path(p)
 end
 
 --- Download with curl (bundled with macOS and Windows 10+). Returns true on success.
-function LL.download(url, dest)
-	local cmd = ("curl -fsSL --max-time 30 -o %s %s"):format(shell_quote(dest), shell_quote(url))
+function LL.download(url, dest, accept)
+	local header = accept and (" -H " .. shell_quote("Accept: " .. accept)) or ""
+	local cmd = ("curl -fsSL --max-time 30%s -o %s %s"):format(header, shell_quote(dest), shell_quote(url))
 	if IS_WINDOWS then cmd = '"' .. cmd .. '"' end -- cmd.exe strips one outer pair of quotes
 	local r = os.execute(cmd)
 	return (r == 0 or r == true) and LL.fileExists(dest)
@@ -1099,25 +1101,62 @@ function LL.localManifest()
 	return LL.parseManifest(LL.readFile(LL.join(LL.paths.data or "?", "manifest.txt")))
 end
 
+--- -1 / 0 / 1 comparing dotted versions ("0.2.10" > "0.2.9").
+function LL.compareVersions(a, b)
+	local pa, pb = {}, {}
+	for n in tostring(a):gmatch("%d+") do pa[#pa + 1] = tonumber(n) end
+	for n in tostring(b):gmatch("%d+") do pb[#pb + 1] = tonumber(n) end
+	for i = 1, math.max(#pa, #pb) do
+		local x, y = pa[i] or 0, pb[i] or 0
+		if x ~= y then return x < y and -1 or 1 end
+	end
+	return 0
+end
+
+function LL.rawBase(ref)
+	return ("https://raw.githubusercontent.com/%s/%s/Fusion/"):format(LL.UPDATE_REPO, ref)
+end
+
+--- The exact commit at the tip of the update branch. Downloading from that commit's URLs
+--- gives one consistent version; branch URLs on raw.githubusercontent.com are cached and can
+--- mix old and new files for a few minutes after a push.
+function LL.latestCommit()
+	local tmp = LL.join(LL.paths.data, "commit.remote")
+	os.remove(tmp)
+	local url = ("https://api.github.com/repos/%s/commits/%s"):format(LL.UPDATE_REPO, LL.UPDATE_BRANCH)
+	local sha
+	if LL.download(url, tmp, "application/vnd.github.sha") then
+		sha = (LL.readFile(tmp) or ""):match("^%s*(%x+)%s*$")
+	end
+	os.remove(tmp)
+	if sha and #sha == 40 then return sha end
+	return nil
+end
+
 --- Returns remote manifest plus the plan, or raises a user error.
 function LL.checkForUpdate()
 	if not LL.paths.data then LL.fail("Can't find the Loom Letter install folder.") end
 	LL.ensureDir(LL.paths.data)
 	local tmp = LL.join(LL.paths.data, "manifest.remote")
 	os.remove(tmp)
-	-- the query string sidesteps GitHub's 5-minute cache so fresh pushes show up immediately
-	if not LL.download(LL.UPDATE_BASE .. "LoomLetter/manifest.txt?t=" .. os.time(), tmp) then
+	local commit = LL.latestCommit()
+	local base = commit and LL.rawBase(commit) or LL.rawBase(LL.UPDATE_BRANCH)
+	if not LL.download(base .. "LoomLetter/manifest.txt" .. (commit and "" or "?t=" .. os.time()), tmp) then
 		LL.fail("Couldn't reach GitHub to check for updates (are you online?).")
 	end
 	local remote = LL.parseManifest(LL.readFile(tmp))
 	os.remove(tmp)
 	if not remote then LL.fail("The update manifest on GitHub couldn't be read.") end
+	if LL.compareVersions(remote.version, LL.VERSION) < 0 then
+		-- GitHub hasn't caught up with a newer push yet; never go backwards
+		return { remote = remote, get = {}, remove = {}, available = false, base = base }
+	end
 	local get, remove = LL.planUpdate(LL.localManifest(), remote, function(path)
 		local p = LL.join(LL.paths.root, path)
 		if not LL.fileExists(p) then return false end -- missing: always download
 		return LL.fileSha1(p)
 	end)
-	return { remote = remote, get = get, remove = remove, available = #get + #remove > 0 }
+	return { remote = remote, get = get, remove = remove, available = #get + #remove > 0, base = base, commit = commit }
 end
 
 --- Download every changed file first, then move them into place, then write the manifest.
@@ -1134,7 +1173,8 @@ function LL.applyUpdate(check)
 		local good = false
 		for attempt = 1, 3 do
 			os.remove(tmp)
-			if LL.download(LL.UPDATE_BASE .. url_path(path) .. "?t=" .. os.time() .. attempt, tmp)
+			local url = check.base .. url_path(path) .. (check.commit and "" or ("?t=" .. os.time() .. attempt))
+			if LL.download(url, tmp)
 				and LL.fileSha1(tmp) == want then
 				good = true
 				break
