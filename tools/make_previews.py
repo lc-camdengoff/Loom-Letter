@@ -332,6 +332,12 @@ def title_underline(c):
     c.rect((150, 204, 490, 211), ACCENT, radius=3)
 
 
+def title_highlight(c):
+    w = text_width(c, "KEY TAKEAWAY", 40) + 36
+    c.rect((320 - w / 2, 156, 320 + w / 2, 206), ACCENT, radius=6)
+    c.text("KEY TAKEAWAY", 320, 181, 40, fill=DARKC)
+
+
 def social_button(c, label, color):
     w = text_width(c, label, 28) + 80
     pill(c, 320, 180, w, 60, color)
@@ -450,6 +456,7 @@ LIBRARY_PREVIEWS = {
     "title-tag-title.png": title_tag_title,
     "title-split-word.png": title_split_word,
     "title-underline.png": title_underline,
+    "title-highlight.png": title_highlight,
     "title-subscribe.png": lambda c: social_button(c, "SUBSCRIBE", RED),
     "title-follow.png": lambda c: social_button(c, "+  FOLLOW", BLUE),
     "title-handle.png": title_handle,

@@ -7,11 +7,11 @@ pick a look in a panel, click once, and it lands on your timeline.
 
 - **Loom Letter panel** (Workspace > Scripts > Loom Letter) with a searchable list of presets,
   previews, and one-click apply.
-- **26 animated titles in five categories** (filter them in the panel). They are real Fusion
+- **27 animated titles in five categories** (filter them in the panel). They are real Fusion
   Titles, so every look stays editable in the Inspector, and the in/out animation follows the
   clip when you trim it.
-  - *Essential Typography*: Slide Up, Boxed Title, Tag Title, Split Word, Underline, Pop,
-    Typewriter, Lower Third
+  - *Essential Typography*: Slide Up, Boxed Title, Tag Title, Split Word, Underline, Highlight,
+    Pop, Typewriter, Lower Third
   - *Social Media*: Subscribe and Follow buttons (with a click and a "Subscribed" state),
     Handle, Chat Bubble
   - *Timers & Counters*: Counter (prefix, separators), Countdown, Progress Bar, Bar Stat
