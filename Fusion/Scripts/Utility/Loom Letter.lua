@@ -18,7 +18,7 @@ something misbehaves, run "Diagnostics" in the window and send that report along
 ]]
 
 local LL = {}
-LL.VERSION = "0.3.0"
+LL.VERSION = "0.3.1"
 LL.BIN_NAME = "Loom Letter"
 LL.SCRATCH_TIMELINE = "Loom Letter Scratch"
 LL.TOOL_TAG = "LoomLetter"          -- tool:SetData key that marks nodes Loom Letter owns
@@ -238,6 +238,9 @@ LL.TITLES = {
 	T{ name = "Underline", category = "Essential", tag = "Line", text = "POWERFUL WORKFLOW", inFrames = 18, outFrames = 12,
 		desc = "An accent underline wipes out while the title rises onto it.",
 		accentTargets = { { "Line", "bg" } } },
+	T{ name = "Highlight", category = "Essential", tag = "Marker", text = "KEY TAKEAWAY", inFrames = 20, outFrames = 12,
+		desc = "A marker stroke sweeps across and reveals the words, then wipes off to the right.",
+		accentTargets = { { "Mark", "bg" } } },
 	T{ name = "Pop", category = "Essential", tag = "Bouncy", text = "POP!", inFrames = 12, outFrames = 8,
 		desc = "Springs in with an overshoot and pops back out. Great for short words." },
 	T{ name = "Typewriter", category = "Essential", tag = "Retro", text = "Type your message here", outFrames = 10,

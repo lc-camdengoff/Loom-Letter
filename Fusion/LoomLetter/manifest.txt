@@ -1,5 +1,5 @@
-version 0.3.0
-cef13e7d3275cd7183ba6239161bed7f5481d531  Scripts/Utility/Loom Letter.lua
+version 0.3.1
+1b2d903dd0824dd96cd0ec592614fc1cfaf25fdf  Scripts/Utility/Loom Letter.lua
 c7ce53783bf3b7ab09fef8e97182f775edda0297  Templates/Edit/Titles/Loom Letter/LL Bar Stat.setting
 7c7894078501ae70fad9086f786ca86f89935b6d  Templates/Edit/Titles/Loom Letter/LL Blur In.setting
 09414b207f552e43727e08c157ca2e2c3b44e7c2  Templates/Edit/Titles/Loom Letter/LL Boxed Title.setting
@@ -13,6 +13,7 @@ f0a9f687698507ec40eeb8c08c93100eb986c614  Templates/Edit/Titles/Loom Letter/LL C
 e1745cdbf445160742c3a12215ba9d89d1c1e151  Templates/Edit/Titles/Loom Letter/LL Follow.setting
 0c58fa30f2b5102fc95e32c064147db997bddb1a  Templates/Edit/Titles/Loom Letter/LL Glow.setting
 5000dda6f979d01fbe8af427e4fe3fa653d1394e  Templates/Edit/Titles/Loom Letter/LL Handle.setting
+f6cbd80c2cf9cc25e3f4928231c491a2bb4cf380  Templates/Edit/Titles/Loom Letter/LL Highlight.setting
 be3fae12e894c9d14cc2fab8020300e99143939e  Templates/Edit/Titles/Loom Letter/LL Lower Third.setting
 bde7aae1e4ad67a7a491290185cc0bff7e7a6c94  Templates/Edit/Titles/Loom Letter/LL Pop.setting
 bbeb31eee608d2beacdafbfb29c227c3ccb784b4  Templates/Edit/Titles/Loom Letter/LL Progress Bar.setting
@@ -45,6 +46,7 @@ fca1ddbdeb9389d173a4c0bfb17cb7b125f124af  LoomLetter/previews/title-circle-pop.p
 c1d4f101f1225fade510f67de2ad76629cae867b  LoomLetter/previews/title-follow.png
 43561bfa950941aee662ed6546d18648a49e627c  LoomLetter/previews/title-glow.png
 572f8ae9c2d9d4e92a2fdff9043a1c6fd899a904  LoomLetter/previews/title-handle.png
+00d2fe94fedad43e7e791d9aef9a629147a1d724  LoomLetter/previews/title-highlight.png
 f74fad13fa1623f06d545886d8c7077bd731bf65  LoomLetter/previews/title-lower-third.png
 accae885c1551f2e1b2120be2082077f7f5283c2  LoomLetter/previews/title-pop.png
 282f009863e831c32e65742ef1e5a6246d7ac360  LoomLetter/previews/title-progress-bar.png

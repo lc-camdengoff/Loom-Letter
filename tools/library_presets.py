@@ -280,6 +280,26 @@ def underline():
     return r.build(f"{h}.Ease")
 
 
+def highlight():
+    r = Rig("LL_Highlight", 20, 12, host_inputs=text_inputs("KEY TAKEAWAY", 0.06, center=(0.5, 0.505), rgb=DARK))
+    h = r.h
+    mw = r.control("MarkWidth", "Highlight Width", 0.34, 0, 1)
+    mh = r.control("MarkHeight", "Highlight Height", 0.075, 0, 0.5)
+    # a marker stroke: the right edge sweeps in left to right, then the left edge follows it out
+    left = f"(0.5 - {mw} / 2 + {mw} * (1 - {h}.EaseOut))"
+    width = f"max({mw} * ({h}.EaseIn + {h}.EaseOut - 1), 0)"
+    center = f"Point({left} + {width} / 2, 0.5)"
+    r.mask("MarkMask", "RectangleMask", center, width, mh, CornerRadius=0.15)
+    r.fill("Mark", ACCENT, "MarkMask")
+    r.mask("RevealMask", "RectangleMask", center, width, 1)
+    r.layer("Mark")
+    r.layer(h, clip="RevealMask")
+    r.expose_text(h)
+    r.expose_color("Mark", "bg", "Highlight Color")
+    r.expose_host("MarkWidth", "MarkHeight")
+    return r.build(f"min({h}.EaseIn + {h}.EaseOut - 1, 1)")
+
+
 # ======================================================================================
 # Social
 # ======================================================================================
@@ -735,6 +755,7 @@ LIBRARY = {
     "LL Tag Title": tag_title,
     "LL Split Word": split_word,
     "LL Underline": underline,
+    "LL Highlight": highlight,
     "LL Subscribe": subscribe,
     "LL Follow": follow,
     "LL Handle": handle,
